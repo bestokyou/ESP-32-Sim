@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPU IoT Board Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="./sim-engine.js"></script>
+<style>
+:root{
+  --bg:#eaf1fb; --bg-a:#dfe9f8; --bg-b:#f6f9fe;
+  --glass:rgba(255,255,255,.58); --glass-strong:rgba(255,255,255,.80); --glass-soft:rgba(255,255,255,.42);
+  --stroke:rgba(255,255,255,.85); --line:rgba(20,40,80,.08); --line-2:rgba(20,40,80,.12);
+  --text:#0f1b2d; --muted:#55657d; --faint:#94a3b8;
+  --blue:#2f7df6; --blue-2:#1e63e6; --blue-soft:rgba(47,125,246,.12);
+  --green:#16a34a; --green-soft:rgba(22,163,74,.12);
+  --red:#e5484d; --red-soft:rgba(229,72,77,.12);
+  --amber:#f59e0b; --amber-soft:rgba(245,158,11,.14);
+  --shadow:0 18px 40px -18px rgba(30,64,140,.25), 0 2px 6px rgba(30,64,140,.06);
+  --shadow-btn:0 8px 18px -6px rgba(47,125,246,.55);
+  --editor-bg:rgba(255,255,255,.55); --gutter:#a3b0c2;
+  --console:#1d2433; --console-text:#e6ecf5; --console-dim:#8a96aa;
+  --hl-k1:#2563eb; --hl-k2:#0e8f86; --hl-k3:#7c3aed; --hl-str:#d63b3b; --hl-num:#0f8a5f; --hl-cmt:#8a97ab; --hl-pre:#2563eb; --hl-text:#1f2a3c;
+  --track:#e3e9f2;
+  --radius:24px;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{
+  --bg:#0c1220; --bg-a:#101a2e; --bg-b:#0a0f1a;
+  --glass:rgba(24,33,52,.62); --glass-strong:rgba(30,41,64,.86); --glass-soft:rgba(30,41,64,.45);
+  --stroke:rgba(255,255,255,.08); --line:rgba(255,255,255,.07); --line-2:rgba(255,255,255,.12);
+  --text:#e8eef8; --muted:#9aa8bf; --faint:#66748b;
+  --blue-soft:rgba(47,125,246,.2); --green-soft:rgba(22,163,74,.2); --red-soft:rgba(229,72,77,.2);
+  --shadow:0 18px 40px -18px rgba(0,0,0,.6), 0 2px 6px rgba(0,0,0,.3);
+  --editor-bg:rgba(10,16,28,.35); --gutter:#56637a;
+  --console:#0b111d;
+  --hl-k1:#6ea8ff; --hl-k2:#4fd1c5; --hl-k3:#b794f6; --hl-str:#ff8a80; --hl-num:#68d391; --hl-cmt:#6b7a92; --hl-pre:#6ea8ff; --hl-text:#dbe4f2;
+  --track:#26324a;
+  color-scheme:dark;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; height:100%; }
+body{
+  font-family:"Inter","IBM Plex Sans Thai","Segoe UI",system-ui,sans-serif;
+  color:var(--text); background:var(--bg);
+  background-image:
+    radial-gradient(1100px 600px at 8% -10%, var(--bg-b), transparent 60%),
+    radial-gradient(900px 700px at 100% 110%, var(--bg-a), transparent 60%);
+  -webkit-font-smoothing:antialiased; overflow:hidden;
+}
+body::before{ /* soft diagonal light streaks */
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background:
+    linear-gradient(118deg, transparent 52%, rgba(255,255,255,.35) 52.2%, rgba(255,255,255,.12) 62%, transparent 62.2%),
+    linear-gradient(118deg, transparent 74%, rgba(120,160,240,.10) 74.2%, rgba(120,160,240,.04) 86%, transparent 86.2%);
+}
+:root[data-theme="dark"] body::before{ opacity:.25; }
+button,input,select,textarea{ font:inherit; color:inherit; }
+button{ cursor:pointer; }
+svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+
+.app{ position:relative; z-index:1; height:100vh; display:flex; flex-direction:column; gap:18px; padding:20px 24px 24px; }
+.glass{
+  background:var(--glass); border:1px solid var(--stroke); border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(22px) saturate(160%); backdrop-filter:blur(22px) saturate(160%);
+}
+
+/* ---------- header ---------- */
+.top{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+.brandbar{ display:flex; align-items:center; gap:10px; padding:8px 10px 8px 22px; border-radius:30px; }
+.brand{ display:flex; align-items:center; gap:12px; padding-right:18px; margin-right:6px; border-right:1px solid var(--line-2); }
+.brand .logo{ width:42px; height:42px; color:var(--blue); }
+.brand b{ display:block; font-size:19px; font-weight:700; letter-spacing:-.2px; line-height:1.1; }
+.brand span{ font-size:13px; color:var(--muted); }
+.btn{
+  display:inline-flex; align-items:center; gap:9px; height:46px; padding:0 22px; border-radius:24px;
+  border:1px solid transparent; background:transparent; font-size:14.5px; font-weight:500; color:var(--text);
+  transition:background .15s, transform .1s, box-shadow .15s, color .15s;
+}
+.btn:hover{ background:var(--glass-strong); }
+.btn:active{ transform:scale(.97); }
+.btn.primary{ background:linear-gradient(180deg,#3b8bff,var(--blue-2)); color:#fff; box-shadow:var(--shadow-btn); }
+.btn.primary:hover{ background:linear-gradient(180deg,#4a95ff,#2a6cf0); }
+.btn.run svg{ fill:currentColor; stroke:none; }
+.btn.stop{ color:var(--red); }
+.btn.stop:disabled{ color:var(--faint); cursor:default; background:transparent; }
+.btn.ghost-on{ background:var(--glass-strong); }
+.boardsel{ display:flex; align-items:center; gap:14px; height:62px; padding:0 18px 0 22px; border-radius:30px; position:relative; }
+.boardsel .chip{ width:44px; height:18px; border-radius:3px; background:linear-gradient(180deg,#3a3f47,#15181d); position:relative; box-shadow:0 2px 4px rgba(0,0,0,.25); }
+.boardsel .chip::before,.boardsel .chip::after{ content:""; position:absolute; left:3px; right:3px; height:3px; background:repeating-linear-gradient(90deg,#c9cfd6 0 2px,transparent 2px 5px); }
+.boardsel .chip::before{ top:-3px; } .boardsel .chip::after{ bottom:-3px; }
+.boardsel select{ appearance:none; border:0; background:transparent; font-size:14.5px; font-weight:500; padding-right:26px; outline:none; cursor:pointer; }
+.boardsel svg{ position:absolute; right:18px; pointer-events:none; color:var(--muted); }
+.top .right{ margin-left:auto; display:flex; gap:12px; align-items:center; }
+.round{ width:52px; height:52px; border-radius:50%; display:grid; place-items:center; padding:0; color:var(--text); border:1px solid var(--stroke); }
+.round:hover{ background:var(--glass-strong); }
+.round svg.i{ width:22px; height:22px; }
+.kbd-hint{ font-size:12px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
+
+/* ---------- layout ---------- */
+.main{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+.main.board-only{ grid-template-columns:minmax(0,1fr); }
+.main.board-only .col-left{ display:none; }
+.col{ display:flex; flex-direction:column; gap:18px; min-height:0; min-width:0; }
+.card{ display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+.card-head{ display:flex; align-items:center; gap:10px; padding:14px 16px 0 22px; }
+.icon-btn{ width:36px; height:36px; display:grid; place-items:center; border-radius:10px; border:0; background:transparent; color:var(--muted); position:relative; }
+.icon-btn:hover{ background:var(--glass-strong); color:var(--text); }
+
+/* ---------- editor ---------- */
+.editor-card{ flex:1 1 auto; }
+.ftab{ display:flex; align-items:center; gap:10px; height:46px; padding:0 18px; border-radius:16px 16px 0 0; background:var(--glass-strong); font-weight:600; font-size:15px; margin-bottom:-1px; }
+.ftab .dot{ width:9px; height:9px; border-radius:50%; background:var(--blue); transition:opacity .2s; }
+.ftab .dot.clean{ opacity:0; }
+.exsel{ position:relative; display:flex; align-items:center; margin-left:4px; }
+.exsel select{ appearance:none; height:34px; border-radius:10px; border:1px solid var(--line-2); background:var(--glass-soft); padding:0 30px 0 32px; font-size:13px; color:var(--muted); max-width:260px; outline:none; cursor:pointer; text-overflow:ellipsis; }
+.exsel select:hover{ color:var(--text); background:var(--glass-strong); }
+.exsel select option{ color:#0f1b2d; background:#fff; }
+.exsel .lead{ position:absolute; left:9px; width:16px; height:16px; color:var(--muted); pointer-events:none; }
+.exsel .tail{ position:absolute; right:9px; width:15px; height:15px; color:var(--muted); pointer-events:none; }
+.editor-wrap{ position:relative; flex:1 1 auto; min-height:260px; display:flex; background:var(--glass-strong); border-top:1px solid var(--line); }
+.gutter{ flex:0 0 64px; padding:14px 14px 14px 0; overflow:hidden; text-align:right; font:14px/27px "JetBrains Mono",monospace; color:var(--gutter); user-select:none; border-right:1px solid var(--line); }
+.gutter div.err{ color:var(--red); font-weight:700; background:linear-gradient(90deg,transparent,var(--red-soft)); }
+.code-area{ position:relative; flex:1 1 auto; min-width:0; }
+.code-area pre, .code-area textarea{
+  position:absolute; inset:0; margin:0; padding:14px 18px 60px; border:0;
+  font:14px/27px "JetBrains Mono",monospace; white-space:pre; overflow:auto; tab-size:2; -moz-tab-size:2;
+}
+.code-area pre{ color:var(--hl-text); pointer-events:none; }
+.code-area textarea{ background:transparent; color:transparent; caret-color:var(--blue); resize:none; outline:none; }
+.code-area textarea::selection{ background:rgba(47,125,246,.22); color:transparent; }
+.code-area pre::-webkit-scrollbar{ display:none; }
+.k1{ color:var(--hl-k1); } .k2{ color:var(--hl-k2); } .k3{ color:var(--hl-k3); }
+.str{ color:var(--hl-str); } .num{ color:var(--hl-num); } .cmt{ color:var(--hl-cmt); font-style:italic; } .pre{ color:var(--hl-pre); }
+.pre .inc{ color:#e07b1a; }
+.errline{ position:absolute; left:0; right:0; height:27px; background:var(--red-soft); border-left:3px solid var(--red); pointer-events:none; display:none; }
+.float-btn{ position:absolute; right:18px; bottom:16px; display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:20px; border:1px solid var(--stroke); background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); color:var(--blue); font-weight:500; font-size:14px; box-shadow:var(--shadow); z-index:3; }
+.float-btn:hover{ background:var(--glass-strong); }
+
+/* ---------- console ---------- */
+.console-card{ flex:0 0 300px; }
+.ctabs{ display:flex; align-items:center; gap:4px; padding:10px 14px 0 14px; border-bottom:1px solid var(--line); }
+.ctab{ display:inline-flex; align-items:center; gap:9px; height:44px; padding:0 16px; border:0; background:transparent; color:var(--muted); font-size:14px; font-weight:500; border-bottom:2.5px solid transparent; border-radius:12px 12px 0 0; position:relative; }
+.ctab.on{ color:var(--blue); border-bottom-color:var(--blue); background:var(--blue-soft); }
+.ctab .badge-dot{ width:7px; height:7px; border-radius:50%; background:var(--amber); display:none; }
+.ctab .badge-dot.show{ display:block; }
+.ctabs .tools{ margin-left:auto; display:flex; gap:4px; }
+.screen{ flex:1 1 auto; min-height:0; margin:12px 12px 0; border-radius:14px; background:var(--console); color:var(--console-text); overflow:auto; padding:14px 18px; font:13px/1.65 "JetBrains Mono",monospace; white-space:pre-wrap; word-break:break-word; box-shadow:inset 0 1px 0 rgba(255,255,255,.04); }
+.screen .err{ color:#ff7b72; } .screen .ok{ color:#7ee2a1; } .screen .warn{ color:#f6c066; } .screen .dim{ color:var(--console-dim); }
+.screen .info-tag{ color:#7fb4ff; }
+.screen .empty{ color:var(--console-dim); font-style:italic; }
+.cfoot{ display:flex; align-items:center; gap:14px; padding:12px 12px 12px 18px; flex-wrap:wrap; }
+.status{ display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:var(--green); white-space:nowrap; }
+.status .ico{ width:20px; height:20px; border-radius:50%; background:var(--green); display:grid; place-items:center; color:#fff; }
+.status .ico svg{ width:12px; height:12px; stroke-width:3; }
+.status.run{ color:var(--blue); } .status.run .ico{ background:var(--blue); animation:pulse 1.4s infinite; }
+.status.err{ color:var(--red); } .status.err .ico{ background:var(--red); }
+.vsep{ width:1px; height:22px; background:var(--line-2); }
+.chk{ display:inline-flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); cursor:pointer; user-select:none; white-space:nowrap; }
+.chk input{ appearance:none; width:18px; height:18px; border-radius:5px; border:1.5px solid var(--line-2); background:var(--glass-strong); display:grid; place-items:center; margin:0; cursor:pointer; }
+.chk input:checked{ background:var(--blue); border-color:var(--blue); }
+.chk input:checked::after{ content:""; width:9px; height:5px; border-left:2px solid #fff; border-bottom:2px solid #fff; transform:rotate(-45deg) translate(1px,-1px); }
+.baud{ position:relative; display:flex; align-items:center; }
+.baud select{ appearance:none; border:0; background:transparent; font-size:13px; padding-right:22px; color:var(--text); outline:none; cursor:pointer; }
+.baud select option{ color:#0f1b2d; background:#fff; }
+.baud svg{ position:absolute; right:0; width:15px; height:15px; color:var(--muted); pointer-events:none; }
+.baud.mismatch select{ color:var(--amber); }
+.sendrow{ margin-left:auto; display:flex; gap:10px; flex:1 1 200px; min-width:200px; }
+.sendrow input{ flex:1 1 auto; min-width:0; height:44px; border-radius:22px; border:1px solid var(--line-2); background:var(--glass-strong); padding:0 18px; font-size:13px; outline:none; }
+.sendrow input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+.sendrow .btn{ height:44px; padding:0 22px; }
+
+/* ---------- board ---------- */
+.board-card{ flex:1 1 auto; }
+.board-head{ padding:16px 16px 0 26px; }
+.board-head h2{ margin:0; font-size:17px; font-weight:600; }
+.board-head .cube{ width:26px; height:26px; color:var(--blue); }
+.pill{ display:inline-flex; align-items:center; gap:7px; height:28px; padding:0 12px; border-radius:14px; font-size:12.5px; font-weight:500; background:var(--glass-soft); color:var(--muted); white-space:nowrap; }
+.pill i{ width:8px; height:8px; border-radius:50%; background:currentColor; }
+.pill.run{ background:var(--green-soft); color:var(--green); } .pill.run i{ animation:pulse 1.4s infinite; }
+.pill.err{ background:var(--red-soft); color:var(--red); }
+.pill.mono{ font-family:"JetBrains Mono",monospace; font-size:11.5px; }
+.seg{ margin-left:auto; display:flex; align-items:center; gap:2px; padding:4px; border-radius:14px; background:var(--glass-soft); border:1px solid var(--stroke); }
+.seg button{ display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 10px; border-radius:10px; border:0; background:transparent; font-size:13px; color:var(--muted); }
+.seg button:hover{ background:var(--glass-strong); color:var(--text); }
+.seg select{ appearance:none; height:32px; border:0; background:transparent; font-size:13px; color:var(--muted); padding:0 8px; outline:none; cursor:pointer; text-align:center; }
+.seg select option{ color:#0f1b2d; background:#fff; }
+.seg .sep{ width:1px; height:18px; background:var(--line-2); }
+.board-body{ flex:1 1 auto; min-height:0; display:flex; gap:12px; padding:8px 16px 16px; }
+.board-area{ position:relative; flex:1 1 auto; min-width:0; min-height:280px; overflow:hidden; display:grid; place-items:center; }
+.board-area.zoomed{ overflow:auto; place-items:start center; }
+.board-area::before{ content:""; position:absolute; left:50%; top:50%; width:min(92%,640px); aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.55) 0,rgba(255,255,255,.2) 45%,transparent 70%); border:1px solid rgba(255,255,255,.5); pointer-events:none; }
+:root[data-theme="dark"] .board-area::before{ background:radial-gradient(circle,rgba(70,120,220,.18),transparent 70%); border-color:rgba(255,255,255,.05); }
+.stage{ position:relative; flex:0 0 auto; }
+.board{ position:absolute; left:0; top:0; width:560px; height:500px; transform-origin:0 0; font-family:"JetBrains Mono",monospace; }
+.board .pcb{ position:absolute; inset:0; filter:drop-shadow(0 26px 30px rgba(20,60,140,.35)); }
+.lbl{ position:absolute; font-size:9.5px; color:#cfe2ff; letter-spacing:.3px; white-space:nowrap; opacity:.92; }
+.hole{ position:absolute; width:18px; height:18px; border-radius:50%; background:#0a1a33; border:3.5px solid #e9eef5; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
+.module{ position:absolute; left:196px; top:16px; width:170px; height:100px; border-radius:4px; background:linear-gradient(180deg,#f4f6f9,#cdd4dc); border:1px solid #98a2ad; box-shadow:0 4px 10px rgba(0,0,0,.25); }
+.module .shield{ position:absolute; inset:14px 12px 22px; border-radius:2px; background:linear-gradient(160deg,#fbfcfd,#d7dde4 60%,#c3cbd4); border:1px solid #a9b2bc; }
+.module .name{ position:absolute; bottom:5px; left:0; right:0; text-align:center; font-size:8.5px; color:#3e4955; letter-spacing:.4px; }
+.sht{ position:absolute; left:340px; top:12px; width:30px; height:20px; border-radius:3px; background:#fff; border:1px solid #b4bec9; box-shadow:0 2px 4px rgba(0,0,0,.2); }
+.rst{ position:absolute; left:386px; top:56px; width:30px; height:30px; border-radius:50%; border:3px solid #0d2140; background:radial-gradient(circle at 35% 30%,#56616d,#1a2129 70%); color:#cbd6e2; font-size:7.5px; display:grid; place-items:center; padding:0; box-shadow:0 3px 6px rgba(0,0,0,.35); }
+.rst:active{ transform:translateY(2px); }
+.rgb{ position:absolute; left:142px; top:84px; width:24px; height:24px; border-radius:4px; background:#0b1420; border:2px solid #31445c; }
+.rgb > div{ position:absolute; inset:3px; border-radius:2px; transition:background .05s; }
+.header-pins{ position:absolute; left:66px; top:196px; width:26px; height:150px; background:#121518; border:1px solid #000; border-radius:3px; transform:rotate(-30deg); display:flex; flex-direction:column; justify-content:space-evenly; align-items:center; padding:4px 0; box-shadow:0 4px 8px rgba(0,0,0,.35); }
+.header-pins i{ width:14px; height:5px; background:linear-gradient(180deg,#f5d24a,#c79a1c); border-radius:1px; display:block; }
+.oled{ position:absolute; left:135px; top:146px; width:290px; height:190px; border-radius:6px; background:linear-gradient(180deg,#2a6ad0,#174a9e); border:1px solid #0c3170; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(0,0,0,.25), inset 0 0 10px rgba(0,0,0,.35); }
+.oled .pins{ position:absolute; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:8px; }
+.oled .pins i{ width:9px; height:9px; border-radius:50%; background:#f2c94c; display:block; box-shadow:inset 0 -1px 0 rgba(0,0,0,.3); }
+.oled .glass-scr{ width:266px; height:140px; margin-top:14px; border-radius:4px; background:#05080d; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:inset 0 0 14px rgba(80,180,255,.18); border:1px solid #000; }
+.oled canvas{ width:256px; height:128px; image-rendering:auto; background:#06090f; }
+.hwbtn{ position:absolute; top:226px; width:48px; height:48px; border-radius:50%; border:3px solid #0d2140; color:#e8eef6; font-size:12px; font-weight:700; display:grid; place-items:center; padding:0; user-select:none; touch-action:none; z-index:5; transition:transform .05s; }
+.hwbtn.up{ background:radial-gradient(circle at 35% 30%,#9aa6b4,#4b5664 70%); box-shadow:0 4px 0 #0b1b33,0 8px 14px rgba(0,0,0,.4); }
+.hwbtn.down{ background:radial-gradient(circle at 35% 30%,#b6c2cf,#5b6774 70%); transform:translateY(3px); box-shadow:0 1px 0 #0b1b33; }
+.relay{ position:absolute; top:344px; width:96px; height:76px; border-radius:4px; background:linear-gradient(180deg,#2c333b,#14181d); border:1px solid #05070a; padding:7px 8px; font-size:8.5px; color:#b4c2d0; box-shadow:0 5px 10px rgba(0,0,0,.35); }
+.relay .st{ position:absolute; left:8px; bottom:7px; font-size:10.5px; font-weight:700; color:#e3eaf2; }
+.relay .led{ position:absolute; right:8px; bottom:9px; width:10px; height:10px; border-radius:50%; background:#4a1515; transition:all .08s; }
+.relay .led.on{ background:#ff3b30; box-shadow:0 0 12px 3px rgba(255,59,48,.8); }
+.relay.on .st{ color:#7ee2a1; }
+.pot{ position:absolute; left:128px; top:408px; width:44px; height:52px; border-radius:6px; background:linear-gradient(180deg,#3b82f6,#1d4fb8); border:2px solid #0d2a5a; cursor:grab; touch-action:none; box-shadow:0 4px 8px rgba(0,0,0,.35); }
+.pot:active{ cursor:grabbing; }
+.pot .knob{ position:absolute; left:50%; top:50%; width:26px; height:26px; border-radius:50%; transform:translate(-50%,-50%); background:radial-gradient(circle at 40% 35%,#fff,#d7e2f0); box-shadow:0 1px 3px rgba(0,0,0,.4); }
+.pot .knob i{ position:absolute; left:50%; top:50%; width:4px; height:11px; margin-left:-2px; margin-top:-11px; border-radius:2px; background:#1d4fb8; transform-origin:50% 100%; display:block; }
+.buzzer{ position:absolute; left:368px; top:404px; width:56px; height:56px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#2c333a,#090c10); border:2px solid #04060a; transition:box-shadow .08s; }
+.buzzer::after{ content:""; position:absolute; left:50%; top:50%; width:9px; height:9px; margin:-4.5px; border-radius:50%; background:#000; }
+.buzzer.on{ box-shadow:0 0 0 7px rgba(245,158,11,.25),0 0 26px rgba(245,158,11,.65); }
+.usb{ position:absolute; left:250px; top:454px; width:60px; height:26px; border-radius:5px; background:linear-gradient(180deg,#fdfdfe,#ccd3db); border:1px solid #8f99a4; box-shadow:0 3px 6px rgba(0,0,0,.25); }
+
+/* part labels (overlay is unscaled so text stays readable) */
+.seg button.on{ background:var(--blue); color:#fff; box-shadow:var(--shadow-btn); }
+.tags{ position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:8; opacity:0; transition:opacity .2s; }
+.tags.show{ opacity:1; }
+.tags.show .tag{ pointer-events:auto; }
+.tag{ position:absolute; display:flex; align-items:center; gap:7px; transform:translate(-7px,-50%); cursor:pointer; white-space:nowrap; }
+.tag.l{ flex-direction:row-reverse; transform:translate(calc(-100% + 7px),-50%); }
+.tag .pt{ width:14px; height:14px; border-radius:50%; background:#fff; border:3px solid #0f1b2d; box-shadow:0 0 0 3px rgba(255,255,255,.45),0 2px 6px rgba(0,0,0,.35); flex:0 0 auto; transition:transform .15s; }
+.tag .nm{ padding:4px 9px; border-radius:8px; background:rgba(15,27,45,.82); color:#fff; font:600 10.5px/1.2 "Inter","IBM Plex Sans Thai",sans-serif; letter-spacing:.5px; text-transform:uppercase; border:1px solid rgba(255,255,255,.18); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); box-shadow:0 4px 10px rgba(0,0,0,.25); transition:background .15s; }
+.tag:hover .pt, .tag.sel .pt{ transform:scale(1.25); border-color:var(--blue); }
+.tag:hover .nm, .tag.sel .nm{ background:var(--blue); }
+.part-info{ position:absolute; left:10px; bottom:10px; z-index:9; width:min(300px,calc(100% - 20px)); padding:14px 16px; border-radius:16px; background:var(--glass-strong); border:1px solid var(--stroke); box-shadow:var(--shadow); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); display:none; }
+.part-info.open{ display:block; }
+.part-info h4{ margin:0 0 4px; font-size:15px; display:flex; align-items:center; gap:8px; }
+.part-info .pin{ font:600 11px "JetBrains Mono",monospace; padding:3px 8px; border-radius:8px; background:var(--blue-soft); color:var(--blue); }
+.part-info p{ margin:6px 0 0; font-size:13px; line-height:1.6; color:var(--muted); }
+.part-info code{ font:12px "JetBrains Mono",monospace; color:var(--text); }
+.part-info .icon-btn{ position:absolute; right:6px; top:6px; width:30px; height:30px; }
+.pins-panel{ flex:0 0 180px; display:flex; flex-direction:column; border-radius:18px; background:var(--glass-soft); border:1px solid var(--stroke); padding:14px 6px 8px 14px; min-height:0; }
+.pins-panel h3{ display:flex; align-items:center; gap:8px; margin:0 0 8px; font-size:15px; font-weight:600; }
+.pins-panel h3 svg{ color:var(--muted); }
+.pin-list{ overflow:auto; padding-right:6px; min-height:0; }
+.pin-row{ display:grid; grid-template-columns:1fr 14px 58px; align-items:center; gap:6px; padding:8px 4px; border-bottom:1px solid var(--line); }
+.pin-row:last-child{ border-bottom:0; }
+.pin-row b{ font-size:13.5px; font-weight:600; display:block; }
+.pin-row small{ font-size:11px; color:var(--faint); display:block; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pin-row .d{ width:10px; height:10px; border-radius:50%; background:#c4ccd7; transition:all .15s; }
+:root[data-theme="dark"] .pin-row .d{ background:#3a465c; }
+.pin-row .v{ font-size:12.5px; color:var(--faint); font-family:"JetBrains Mono",monospace; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pin-row.hi .d{ background:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+.pin-row.hi .v{ color:var(--blue); font-weight:600; }
+
+/* ---------- sensors ---------- */
+.sensor-card{ flex:0 0 auto; }
+.sensor-head{ padding:16px 16px 4px 26px; }
+.sensor-head h2{ margin:0; font-size:17px; font-weight:600; }
+.sensor-head svg{ color:var(--text); }
+.stabs{ margin-left:auto; display:flex; padding:4px; border-radius:14px; background:var(--glass-soft); border:1px solid var(--stroke); }
+.stabs button{ height:30px; padding:0 14px; border:0; border-radius:10px; background:transparent; font-size:13px; color:var(--muted); }
+.stabs button.on{ background:var(--glass-strong); color:var(--text); box-shadow:0 1px 3px rgba(20,40,80,.12); font-weight:500; }
+.sensor-body{ display:flex; gap:16px; padding:8px 16px 18px 26px; }
+.sliders{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:6px; justify-content:center; }
+.srow{ display:grid; grid-template-columns:24px minmax(110px,170px) minmax(0,1fr) 78px; align-items:center; gap:12px; min-height:46px; }
+.srow .ic{ width:22px; height:22px; }
+.srow label{ font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.val{ justify-self:end; min-width:72px; text-align:center; padding:6px 10px; border-radius:12px; background:var(--blue-soft); color:var(--blue); font-weight:600; font-size:13.5px; font-variant-numeric:tabular-nums; }
+.srow input[type=text]{ grid-column:3 / 5; height:38px; border-radius:12px; border:1px solid var(--line-2); background:var(--glass-strong); padding:0 14px; font:13px "JetBrains Mono",monospace; outline:none; }
+.srow input[type=text]:focus{ border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
+input[type=range]{ -webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:6px; margin:0; outline:none; cursor:pointer;
+  background:linear-gradient(90deg,var(--blue) 0 var(--p,50%),var(--track) var(--p,50%) 100%); }
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:var(--blue); border:3px solid #fff; box-shadow:0 2px 8px rgba(47,125,246,.45); }
+input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:var(--blue); border:3px solid #fff; box-shadow:0 2px 8px rgba(47,125,246,.45); }
+.side-card{ flex:0 0 160px; border-radius:18px; background:var(--glass-soft); border:1px solid var(--stroke); padding:14px; display:flex; flex-direction:column; gap:10px; }
+.side-card .hd{ display:flex; align-items:center; gap:8px; font-size:14px; font-weight:500; }
+.side-card .hd svg{ color:var(--green); }
+.side-card.off .hd svg{ color:var(--red); }
+.reading{ display:flex; align-items:center; justify-content:center; gap:10px; height:52px; border-radius:14px; background:var(--glass-strong); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums; }
+.reading svg{ color:var(--blue); width:22px; height:22px; }
+.side-card.off .reading{ color:var(--faint); }
+.switch{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px; color:var(--muted); cursor:pointer; user-select:none; }
+.switch input{ appearance:none; width:38px; height:22px; border-radius:11px; background:#cdd5e0; position:relative; cursor:pointer; margin:0; transition:background .15s; flex:0 0 auto; }
+.switch input::after{ content:""; position:absolute; left:2px; top:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .15s; }
+.switch input:checked{ background:var(--green); }
+.switch input:checked::after{ transform:translateX(16px); }
+.hidden{ display:none !important; }
+
+/* ---------- popovers / modal / toast ---------- */
+.menu{ position:absolute; right:0; top:42px; min-width:220px; padding:6px; border-radius:14px; background:var(--glass-strong); border:1px solid var(--stroke); box-shadow:var(--shadow); -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); z-index:30; display:none; }
+.menu.open{ display:block; }
+.menu button{ width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border:0; border-radius:9px; background:transparent; font-size:13.5px; color:var(--text); text-align:left; }
+.menu button:hover{ background:var(--blue-soft); color:var(--blue); }
+.menu hr{ border:0; border-top:1px solid var(--line); margin:4px 6px; }
+.modal-bg{ position:fixed; inset:0; z-index:50; background:rgba(15,27,45,.25); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:none; place-items:center; padding:16px; }
+.modal-bg.open{ display:grid; }
+.modal{ width:min(560px,100%); max-height:90vh; overflow:auto; padding:26px 28px; background:var(--glass-strong); }
+.modal h3{ margin:0 0 14px; font-size:18px; }
+.modal ul{ margin:0; padding-left:18px; color:var(--muted); font-size:14px; line-height:1.8; }
+.modal b{ color:var(--text); }
+.modal kbd{ font:12px "JetBrains Mono",monospace; padding:2px 6px; border-radius:6px; background:var(--blue-soft); color:var(--blue); }
+.modal .mono{ margin-top:14px; padding:12px 14px; border-radius:12px; background:var(--glass-soft); font:12px/1.7 "JetBrains Mono",monospace; color:var(--muted); }
+.modal .close{ float:right; }
+.toast{ position:fixed; left:50%; bottom:28px; transform:translate(-50%,20px); opacity:0; padding:10px 18px; border-radius:14px; background:var(--glass-strong); border:1px solid var(--stroke); box-shadow:var(--shadow); -webkit-backdrop-filter:blur(20px); backdrop-filter:blur(20px); font-size:13.5px; transition:all .25s; z-index:60; pointer-events:none; }
+.toast.show{ opacity:1; transform:translate(-50%,0); }
+.card:fullscreen{ border-radius:0; background:var(--bg); }
+@keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:.45 } }
+
+::-webkit-scrollbar{ width:10px; height:10px; }
+::-webkit-scrollbar-thumb{ background:rgba(120,140,170,.35); border-radius:10px; border:2px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-track{ background:transparent; }
+.screen::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); background-clip:padding-box; }
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  body{ overflow:auto; }
+  .app{ height:auto; min-height:100vh; padding:14px 16px 20px; }
+  .main{ grid-template-columns:minmax(0,1fr); }
+  .editor-card{ height:60vh; flex:0 0 auto; }
+  .console-card{ flex:0 0 340px; }
+  .board-card{ flex:0 0 auto; }
+  .board-area{ height:min(80vw,460px); }
+  .brand span{ display:none; }
+}
+@media (max-width:720px){
+  .brandbar{ flex-wrap:wrap; padding:8px 12px; border-radius:24px; width:100%; }
+  .brand{ border-right:0; padding-right:0; margin-right:auto; }
+  .btn{ padding:0 14px; height:40px; }
+  .boardsel{ height:52px; flex:1 1 auto; }
+  .round{ width:46px; height:46px; }
+  .top .right{ width:100%; justify-content:flex-end; }
+  .top .right .kbd-hint{ margin-right:auto; }
+  .ctab{ padding:0 10px; white-space:nowrap; }
+  .board-body{ flex-direction:column; }
+  .pins-panel{ flex:0 0 auto; max-height:260px; }
+  .sensor-body{ flex-direction:column; padding-left:16px; }
+  .side-card{ flex:0 0 auto; }
+  .srow{ grid-template-columns:22px 1fr 72px; }
+  .srow input[type=range]{ grid-column:1 / 4; grid-row:2; }
+  .srow input[type=text]{ grid-column:1 / 4; grid-row:2; }
+  .card-head{ flex-wrap:wrap; }
+  .exsel select{ max-width:170px; }
+  .cfoot .vsep{ display:none; }
+  .seg .lbl-t{ display:none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6M14 4l-4 16"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5" fill="currentColor" stroke="none"/><path d="M3.5 21c.8-4.2 4.2-6.5 8.5-6.5s7.7 2.3 8.5 6.5z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M3 8V5a2 2 0 0 1 2-2h3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M8 21H5a2 2 0 0 1-2-2v-3"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-term" viewBox="0 0 24 24"><path d="m4 17 6-6-6-6M12 19h8"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-dl" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-up" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-cube" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="currentColor" fill-opacity=".15"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></symbol>
+    <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-radio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/></symbol>
+    <symbol id="i-therm" viewBox="0 0 24 24"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/><path d="M11.5 18.5v-6" stroke-width="2.5"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2.7s-6 6.4-6 11.3a6 6 0 0 0 12 0c0-4.9-6-11.3-6-11.3z" fill="currentColor" fill-opacity=".9"/></symbol>
+    <symbol id="i-wifi" viewBox="0 0 24 24"><path d="M5 12.6a10 10 0 0 1 14 0M8.5 16.1a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 20 0"/><circle cx="12" cy="19.6" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4M3.3 19a10 10 0 1 1 17.4 0"/></symbol>
+  </defs>
+</svg>
+
+<div class="app">
+  <!-- ================= HEADER ================= -->
+  <header class="top">
+    <div class="brandbar glass">
+      <div class="brand">
+        <svg class="i logo" style="stroke-width:1.7"><use href="#i-chip"/></svg>
+        <div><b>SPU IoT</b><span>Board Simulator</span></div>
+      </div>
+      <button class="btn primary" id="btnCode" title="แสดง/ซ่อนตัวแก้ไขโค้ด"><svg class="i"><use href="#i-code"/></svg>Code</button>
+      <button class="btn run" id="btnRun" title="Verify &amp; Run (Ctrl+R)"><svg class="i"><use href="#i-play"/></svg>Run</button>
+      <button class="btn stop" id="btnStop" title="Stop (Ctrl+.)" disabled><svg class="i"><use href="#i-stop"/></svg>Stop</button>
+      <button class="btn" id="btnReset" title="Reset board"><svg class="i"><use href="#i-reset"/></svg>Reset</button>
+    </div>
+    <label class="boardsel glass" title="บอร์ดเป้าหมาย">
+      <span class="chip"></span>
+      <select aria-label="Board"><option>ESP32-DevKit V1 · SPU IoT</option></select>
+      <svg class="i"><use href="#i-down"/></svg>
+    </label>
+    <div class="right">
+      <span class="kbd-hint" id="millis">millis 0</span>
+      <button class="round glass" id="btnTheme" title="สลับธีม"><svg class="i"><use href="#i-sun"/></svg></button>
+      <button class="round glass" id="btnHelp" title="วิธีใช้งาน"><svg class="i" style="color:var(--muted)"><use href="#i-user"/></svg></button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main" id="main">
+    <section class="col col-left">
+      <div class="card glass editor-card" id="editorCard">
+        <div class="card-head">
+          <div class="ftab"><svg class="i"><use href="#i-file"/></svg><span id="fileName">main.ino</span><span class="dot clean" id="dirtyDot"></span></div>
+          <button class="icon-btn" id="btnNew" title="ไฟล์ใหม่ (Blank)"><svg class="i"><use href="#i-plus"/></svg></button>
+          <label class="exsel" title="ตัวอย่างโค้ด">
+            <svg class="i lead"><use href="#i-book"/></svg>
+            <select id="exampleSel"></select>
+            <svg class="i tail"><use href="#i-down"/></svg>
+          </label>
+          <span style="margin-left:auto"></span>
+          <button class="icon-btn" id="btnFsEditor" title="เต็มจอ"><svg class="i"><use href="#i-expand"/></svg></button>
+          <div style="position:relative">
+            <button class="icon-btn" id="btnMore" title="เมนู"><svg class="i"><use href="#i-more"/></svg></button>
+            <div class="menu" id="moreMenu">
+              <button data-act="open"><svg class="i"><use href="#i-up"/></svg>เปิดไฟล์ .ino…</button>
+              <button data-act="save"><svg class="i"><use href="#i-dl"/></svg>ดาวน์โหลด main.ino</button>
+              <button data-act="copy"><svg class="i"><use href="#i-copy"/></svg>คัดลอกโค้ดทั้งหมด</button>
+              <hr>
+              <button data-act="help"><svg class="i"><use href="#i-help"/></svg>วิธีใช้งาน &amp; คีย์ลัด</button>
+            </div>
+          </div>
+        </div>
+        <div class="editor-wrap">
+          <div class="gutter" id="gutter"></div>
+          <div class="code-area">
+            <pre id="hl" aria-hidden="true"></pre>
+            <textarea id="code" wrap="off" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Code editor"></textarea>
+          </div>
+          <button class="float-btn" id="btnClearCode" title="ล้างโค้ด"><svg class="i"><use href="#i-trash"/></svg>Clear</button>
+        </div>
+        <input type="file" id="fileIn" accept=".ino,.cpp,.c,.h,.txt" hidden>
+      </div>
+
+      <div class="card glass console-card">
+        <div class="ctabs">
+          <button class="ctab on" data-tab="out"><svg class="i"><use href="#i-term"/></svg>Output</button>
+          <button class="ctab" data-tab="ser"><svg class="i"><use href="#i-pulse"/></svg>Serial Monitor<span class="badge-dot" id="serDot"></span></button>
+          <div class="tools">
+            <button class="icon-btn" id="btnCopyCon" title="คัดลอก"><svg class="i"><use href="#i-copy"/></svg></button>
+            <button class="icon-btn" id="btnDlCon" title="ดาวน์โหลด .txt"><svg class="i"><use href="#i-dl"/></svg></button>
+            <button class="icon-btn" id="btnClearCon" title="ล้างหน้าจอ"><svg class="i"><use href="#i-trash"/></svg></button>
+          </div>
+        </div>
+        <div class="screen" id="outScreen"></div>
+        <div class="screen hidden" id="serScreen"></div>
+        <div class="cfoot">
+          <span class="status" id="status"><span class="ico"><svg class="i"><use href="#i-check"/></svg></span><span id="statusText">Ready to Run</span></span>
+          <span class="vsep"></span>
+          <label class="chk"><input type="checkbox" id="chkTs" checked>Timestamp</label>
+          <label class="chk"><input type="checkbox" id="chkAs" checked>Autoscroll</label>
+          <span class="vsep"></span>
+          <label class="baud" id="baudWrap" title="Baud rate ของ Serial Monitor">
+            <select id="baudSel">
+              <option>9600</option><option>19200</option><option>38400</option><option>57600</option><option selected>115200</option><option>230400</option>
+            </select>
+            <svg class="i"><use href="#i-down"/></svg>
+          </label>
+          <div class="sendrow">
+            <input type="text" id="serIn" placeholder="พิมพ์ข้อความส่งเข้า Serial Monitor…">
+            <button class="btn primary" id="btnSend"><svg class="i"><use href="#i-send"/></svg>Send</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="card glass board-card" id="boardCard">
+        <div class="card-head board-head">
+          <svg class="i cube"><use href="#i-cube"/></svg>
+          <h2>Board Simulator</h2>
+          <span class="pill" id="runPill"><i></i><span id="runPillText">Idle</span></span>
+          <span class="pill mono" id="wifiPill" title="WiFi status"><svg class="i" style="width:14px;height:14px"><use href="#i-wifi"/></svg><span id="wifiPillText">IDLE</span></span>
+          <div class="seg">
+            <button id="btnTags" title="แสดงชื่อชิ้นส่วน (L)"><svg class="i" style="width:16px;height:16px"><use href="#i-tag"/></svg><span class="lbl-t">รายละเอียด</span></button>
+            <span class="sep"></span>
+            <select id="speedSel" title="ความเร็วการจำลอง">
+              <option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
+            </select>
+            <span class="sep"></span>
+            <button id="btnZoom" title="ซูม"><svg class="i" style="width:16px;height:16px"><use href="#i-zoom"/></svg><span class="lbl-t" id="zoomText">Zoom</span></button>
+            <span class="sep"></span>
+            <button id="btnFsBoard" title="เต็มจอ"><svg class="i" style="width:16px;height:16px"><use href="#i-expand"/></svg></button>
+          </div>
+        </div>
+        <div class="board-body">
+          <div class="board-area" id="boardArea">
+            <div class="stage" id="stage">
+              <div class="board" id="board">
+                <svg class="pcb" viewBox="0 0 560 500" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="pcbG" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stop-color="#3a86e8"/><stop offset=".5" stop-color="#1d5fc4"/><stop offset="1" stop-color="#174ea8"/>
+                    </linearGradient>
+                    <linearGradient id="pcbEdge" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="#7fb5ff"/><stop offset="1" stop-color="#0f3c88"/>
+                    </linearGradient>
+                  </defs>
+                  <polygon points="148,16 412,16 543,250 412,484 148,484 17,250" fill="url(#pcbEdge)" stroke="url(#pcbEdge)" stroke-width="28" stroke-linejoin="round"/>
+                  <polygon points="150,22 410,22 536,250 410,478 150,478 24,250" fill="url(#pcbG)" stroke="url(#pcbG)" stroke-width="22" stroke-linejoin="round"/>
+                  <g stroke="#6fa8f5" stroke-opacity=".28" stroke-width="2" fill="none">
+                    <path d="M110 250h30M420 250h30M200 130v-10M360 130v-10M280 340v-6M90 160l40 40M470 160l-40 40M100 340l40-20M460 340l-40-20"/>
+                    <path d="M185 470v-20h40M375 470v-20h-40"/>
+                  </g>
+                </svg>
+                <div class="hole" style="left:118px;top:58px"></div>
+                <div class="hole" style="left:424px;top:58px"></div>
+                <div class="hole" style="left:84px;top:424px"></div>
+                <div class="hole" style="left:458px;top:424px"></div>
+
+                <div class="module"><div class="shield"></div><div class="name">ESP32-D0WDQ6</div></div>
+                <div class="sht" title="SHT31"></div>
+                <div class="lbl" style="left:374px;top:18px">SHT31</div>
+                <button class="rst" id="hwRst" title="RST">RST</button>
+
+                <div class="rgb"><div id="rgbLed"></div></div>
+                <div class="lbl" style="left:108px;top:112px">RGB 25/26/27</div>
+
+                <div class="header-pins"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+                <div class="oled">
+                  <div class="pins"><i></i><i></i><i></i><i></i></div>
+                  <div class="glass-scr"><canvas id="oled" width="512" height="256"></canvas></div>
+                </div>
+
+                <button class="hwbtn up" id="hwA" style="left:86px">A</button>
+                <button class="hwbtn up" id="hwB" style="right:86px">B</button>
+
+                <div class="relay" id="relay1" style="left:182px">K1 · RELAY 1<div class="st">OFF</div><div class="led"></div></div>
+                <div class="relay" id="relay2" style="left:284px">K2 · RELAY 2<div class="st">OFF</div><div class="led"></div></div>
+
+                <div class="pot" id="pot" title="ลากเพื่อหมุน VR"><div class="knob"><i id="knob"></i></div></div>
+                <div class="lbl" style="left:110px;top:463px">VR 10K · A36</div>
+                <div class="buzzer" id="buzzer" title="Buzzer 33"></div>
+                <div class="lbl" style="left:370px;top:463px">Buzzer-33</div>
+                <div class="usb"></div>
+              </div>
+              <div class="tags" id="tags"></div>
+            </div>
+            <div class="part-info" id="partInfo">
+              <button class="icon-btn" id="partClose" title="ปิด"><svg class="i"><use href="#i-x"/></svg></button>
+              <h4><span id="piName"></span><span class="pin" id="piPin"></span></h4>
+              <p id="piDesc"></p>
+            </div>
+          </div>
+          <aside class="pins-panel">
+            <h3><svg class="i"><use href="#i-radio"/></svg>Pin State</h3>
+            <div class="pin-list" id="pinList"></div>
+          </aside>
+        </div>
+      </div>
+
+      <div class="card glass sensor-card">
+        <div class="card-head sensor-head">
+          <svg class="i"><use href="#i-pulse"/></svg>
+          <h2>Sensors</h2>
+          <div class="stabs">
+            <button class="on" data-stab="sens">Sensors</button>
+            <button data-stab="wifi">WiFi Router</button>
+          </div>
+        </div>
+        <div class="sensor-body" id="pSens">
+          <div class="sliders">
+            <div class="srow">
+              <svg class="i ic" style="color:var(--blue)"><use href="#i-therm"/></svg>
+              <label for="rTemp">อุณหภูมิ - Temp °C</label>
+              <input type="range" id="rTemp" min="15" max="45" step="0.1" value="27.5">
+              <span class="val" id="vTemp">27.5 °C</span>
+            </div>
+            <div class="srow">
+              <svg class="i ic" style="color:var(--blue)"><use href="#i-drop"/></svg>
+              <label for="rHum">ความชื้น - RH %</label>
+              <input type="range" id="rHum" min="10" max="99" step="0.1" value="54">
+              <span class="val" id="vHum">54.0 %</span>
+            </div>
+            <div class="srow">
+              <svg class="i ic" style="color:var(--amber)"><use href="#i-sun"/></svg>
+              <label for="rAdc">VR / LDR - A36</label>
+              <input type="range" id="rAdc" min="0" max="4095" step="1" value="2048">
+              <span class="val" id="vAdc">2048</span>
+            </div>
+          </div>
+          <div class="side-card" id="shtCard">
+            <div class="hd"><svg class="i"><use href="#i-wifi"/></svg>SHT31 <span style="margin-left:auto;font-size:11px;color:var(--faint)">0x44</span></div>
+            <div class="reading"><svg class="i"><use href="#i-therm"/></svg><span id="shtT">27.5 °C</span></div>
+            <div class="reading"><svg class="i"><use href="#i-drop"/></svg><span id="shtH">54.0 %</span></div>
+            <label class="switch" title="ปิดเพื่อทดสอบเคส sensor not found">พร้อมใช้งาน<input type="checkbox" id="chkSht" checked></label>
+          </div>
+        </div>
+        <div class="sensor-body hidden" id="pWifi">
+          <div class="sliders">
+            <div class="srow">
+              <svg class="i ic" style="color:var(--blue)"><use href="#i-wifi"/></svg>
+              <label for="tSsid">SSID</label>
+              <input type="text" id="tSsid" value="SPU-IoT" spellcheck="false">
+            </div>
+            <div class="srow">
+              <svg class="i ic" style="color:var(--blue)"><use href="#i-chip"/></svg>
+              <label for="tPass">Password</label>
+              <input type="text" id="tPass" value="12345678" spellcheck="false">
+            </div>
+            <div class="srow">
+              <svg class="i ic" style="color:var(--amber)"><use href="#i-gauge"/></svg>
+              <label for="rDelay">เวลาเชื่อมต่อ - delay</label>
+              <input type="range" id="rDelay" min="0" max="8000" step="250" value="2500">
+              <span class="val" id="vDelay">2500 ms</span>
+            </div>
+          </div>
+          <div class="side-card" id="apCard">
+            <div class="hd"><svg class="i"><use href="#i-wifi"/></svg>Router</div>
+            <div class="reading" style="font-size:14px" id="apState">IDLE</div>
+            <label class="switch" title="SSID/รหัสในโค้ดต้องตรงกับช่องนี้">เปิดสัญญาณ<input type="checkbox" id="chkAp" checked></label>
+            <div style="font-size:11px;color:var(--faint);line-height:1.5">SSID / รหัสในโค้ดต้องตรงกับช่องนี้</div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-bg" id="helpModal">
+  <div class="modal glass">
+    <button class="icon-btn close" data-close><svg class="i"><use href="#i-x"/></svg></button>
+    <h3>วิธีใช้งาน</h3>
+    <ul>
+      <li>กดปุ่ม <b>A</b> / <b>B</b> บนบอร์ด หรือคีย์ <kbd>A</kbd> <kbd>B</kbd> (กดค้างได้)</li>
+      <li><kbd>Ctrl</kbd>+<kbd>R</kbd> หรือ <kbd>Ctrl</kbd>+<kbd>Enter</kbd> = Verify &amp; Run · <kbd>Ctrl</kbd>+<kbd>.</kbd> = Stop · ปุ่ม RST บนบอร์ด = รีเซ็ต</li>
+      <li><kbd>Ctrl</kbd>+<kbd>S</kbd> = ดาวน์โหลดโค้ดเป็น main.ino · <kbd>Ctrl</kbd>+<kbd>/</kbd> = คอมเมนต์บรรทัด</li>
+      <li>หมุน VR ด้วยการลากบนปุ่มสีน้ำเงิน หรือใช้สไลเดอร์ VR/LDR</li>
+      <li>Buzzer มีเสียงจริง — คลิกที่หน้าเว็บ 1 ครั้งเพื่ออนุญาตเสียง</li>
+      <li>แท็บ WiFi Router ใช้จำลองสัญญาณ — SSID/รหัสในโค้ดต้องตรงกัน</li>
+      <li>ปุ่ม <b>Code</b> ใช้ซ่อน/แสดงตัวแก้ไขโค้ด เพื่อดูบอร์ดแบบเต็มความกว้าง</li>
+    </ul>
+    <div class="mono">RGB 25/26/27 (common anode) · BTN A=0 B=4 · RELAY 32/14 (active LOW) · BUZZER 33 · VR 36 · OLED+SHT31 on I2C</div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+const S = window.SPUSim;
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem("spu-sim:"+k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem("spu-sim:"+k, v); }catch(e){} }
+};
+if(!S){ document.body.innerHTML = "<p style='padding:40px'>โหลด sim-engine.js ไม่สำเร็จ</p>"; return; }
+
+const names = Object.keys(S.EXAMPLES);
+const st = {
+  exampleName: names[0], baseCode: S.EXAMPLES[names[0]],
+  baud: 115200, badge: "idle", badgeKind: "", errLine: 0,
+  tab: "out", rev: -1, serLen: 0, snap: null, zoom: 1, fit: 1
+};
+
+/* ---------------- toast ---------------- */
+let toastT;
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+/* ---------------- theme ---------------- */
+function setTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  $("btnTheme").querySelector("use").setAttribute("href", t === "dark" ? "#i-moon" : "#i-sun");
+  store.set("theme", t);
+}
+setTheme(store.get("theme") || "light");
+$("btnTheme").onclick = () => setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+
+/* ---------------- editor ---------------- */
+const code = $("code"), hl = $("hl"), gutter = $("gutter");
+const exSel = $("exampleSel");
+names.forEach(n => { const o = document.createElement("option"); o.value = o.textContent = n; exSel.appendChild(o); });
+
+function hlHtml(src){
+  // engine highlight, then colour the <header.h> part of #include lines
+  return S.highlight(src).replace(/(<span class="pre">#\s*include\s*)(&lt;[^<]*?&gt;|"[^<]*?")/g, '$1<span class="inc">$2</span>');
+}
+function renderEditor(){
+  const v = code.value;
+  hl.innerHTML = hlHtml(v) + "\n";
+  const n = v.split("\n").length;
+  let g = "";
+  for(let i = 1; i <= n; i++) g += '<div' + (i === st.errLine ? ' class="err"' : '') + '>' + i + '</div>';
+  gutter.innerHTML = g + "<div>&nbsp;</div><div>&nbsp;</div>";
+  $("dirtyDot").classList.toggle("clean", v === st.baseCode);
+  syncScroll();
+}
+function syncScroll(){
+  hl.scrollTop = code.scrollTop; hl.scrollLeft = code.scrollLeft;
+  gutter.scrollTop = code.scrollTop;
+}
+let saveT;
+function setCode(v, base){
+  code.value = v;
+  if(base !== undefined) st.baseCode = base;
+  st.errLine = 0;
+  renderEditor();
+  clearTimeout(saveT); saveT = setTimeout(() => store.set("code", code.value), 300);
+}
+code.addEventListener("input", () => {
+  renderEditor();
+  clearTimeout(saveT); saveT = setTimeout(() => store.set("code", code.value), 300);
+});
+code.addEventListener("scroll", syncScroll);
+function insertText(t){
+  // setRangeText keeps native undo in most browsers via execCommand fallback
+  if(!document.execCommand || !document.execCommand("insertText", false, t)){
+    code.setRangeText(t, code.selectionStart, code.selectionEnd, "end");
+    renderEditor();
+  }
+}
+code.addEventListener("keydown", (e) => {
+  if(e.key === "Tab"){
+    e.preventDefault();
+    insertText("  ");
+  } else if(e.key === "Enter" && !e.ctrlKey && !e.metaKey){
+    const v = code.value, a = code.selectionStart;
+    const lineStart = v.lastIndexOf("\n", a - 1) + 1;
+    const indent = (v.slice(lineStart, a).match(/^[ \t]*/) || [""])[0];
+    const extra = /\{\s*$/.test(v.slice(lineStart, a)) ? "  " : "";
+    e.preventDefault();
+    insertText("\n" + indent + extra);
+  } else if(e.key === "/" && (e.ctrlKey || e.metaKey)){
+    e.preventDefault();
+    const v = code.value;
+    const a = v.lastIndexOf("\n", code.selectionStart - 1) + 1;
+    let b = v.indexOf("\n", code.selectionEnd); if(b < 0) b = v.length;
+    const lines = v.slice(a, b).split("\n");
+    const allC = lines.every(l => /^\s*\/\//.test(l) || !l.trim());
+    const out = lines.map(l => allC ? l.replace(/^(\s*)\/\/ ?/, "$1") : (l.trim() ? l.replace(/^(\s*)/, "$1// ") : l)).join("\n");
+    code.setSelectionRange(a, b);
+    insertText(out);
+    code.setSelectionRange(a, a + out.length);
+  }
+});
+
+const saved = store.get("code");
+const savedEx = store.get("example");
+if(savedEx && S.EXAMPLES[savedEx]){ st.exampleName = savedEx; exSel.value = savedEx; }
+setCode(saved != null ? saved : S.EXAMPLES[st.exampleName], S.EXAMPLES[st.exampleName]);
+
+exSel.onchange = () => {
+  const n = exSel.value;
+  if(code.value !== st.baseCode && !confirm("โหลดตัวอย่าง \"" + n + "\" ? โค้ดที่แก้ไขไว้จะถูกแทนที่")){ exSel.value = st.exampleName; return; }
+  st.exampleName = n; store.set("example", n);
+  setCode(S.EXAMPLES[n], S.EXAMPLES[n]);
+};
+$("btnNew").onclick = () => {
+  if(code.value !== st.baseCode && !confirm("เริ่มไฟล์ใหม่? โค้ดที่แก้ไขไว้จะถูกแทนที่")) return;
+  st.exampleName = names[0]; exSel.value = names[0]; store.set("example", names[0]);
+  setCode(S.EXAMPLES[names[0]], S.EXAMPLES[names[0]]);
+  code.focus();
+};
+$("btnClearCode").onclick = () => {
+  if(!code.value.trim()) return;
+  if(!confirm("ล้างโค้ดทั้งหมดในตัวแก้ไข?")) return;
+  setCode("");
+  code.focus();
+};
+
+function download(name, text){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type:"text/plain;charset=utf-8" }));
+  a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); }
+  catch(e){
+    const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t);
+    t.select(); try{ document.execCommand("copy"); }catch(_){} t.remove();
+  }
+  toast("คัดลอกแล้ว");
+}
+
+/* more menu */
+const moreMenu = $("moreMenu");
+$("btnMore").onclick = (e) => { e.stopPropagation(); moreMenu.classList.toggle("open"); };
+document.addEventListener("click", () => moreMenu.classList.remove("open"));
+moreMenu.onclick = (e) => {
+  const b = e.target.closest("button"); if(!b) return;
+  const act = b.dataset.act;
+  if(act === "open") $("fileIn").click();
+  if(act === "save") download("main.ino", code.value);
+  if(act === "copy") copyText(code.value);
+  if(act === "help") openHelp();
+};
+$("fileIn").onchange = (e) => {
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => { setCode(String(r.result), String(r.result)); $("fileName").textContent = f.name; toast("เปิด " + f.name); };
+  r.readAsText(f); e.target.value = "";
+};
+
+/* fullscreen */
+function toggleFs(el){
+  if(document.fullscreenElement) document.exitFullscreen();
+  else if(el.requestFullscreen) el.requestFullscreen().catch(() => {});
+}
+$("btnFsEditor").onclick = () => toggleFs($("editorCard"));
+$("btnFsBoard").onclick = () => toggleFs($("boardCard"));
+document.addEventListener("fullscreenchange", () => setTimeout(measureBoard, 50));
+
+/* Code toggle (show/hide editor column) */
+$("btnCode").onclick = () => {
+  const m = $("main"); m.classList.toggle("board-only");
+  const on = !m.classList.contains("board-only");
+  $("btnCode").classList.toggle("primary", on);
+  setTimeout(measureBoard, 30);
+};
+
+/* ---------------- engine hooks ---------------- */
+S.HOST.source = () => code.value;
+S.HOST.badge = (t, k) => { st.badge = t; st.badgeKind = k || ""; renderStatus(); };
+S.HOST.baud = (b) => { st.baud = b; $("baudSel").value = String(b); if($("baudSel").value !== String(b)){ const o = document.createElement("option"); o.textContent = b; $("baudSel").appendChild(o); $("baudSel").value = String(b); } renderBaud(); };
+S.HOST.errLine = (n) => { st.errLine = n; renderEditor(); if(n) scrollToLine(n); };
+S.HOST.canvas = $("oled");
+S.paintOLED();
+
+function scrollToLine(n){
+  const top = (n - 1) * 27;
+  if(top < code.scrollTop || top > code.scrollTop + code.clientHeight - 60) code.scrollTop = Math.max(0, top - code.clientHeight / 3);
+  syncScroll();
+}
+
+function renderStatus(){
+  const k = st.badgeKind, t = st.badge;
+  const s = $("status"), p = $("runPill");
+  s.className = "status" + (k === "run" ? " run" : k === "err" ? " err" : "");
+  s.querySelector("use").setAttribute("href", k === "err" ? "#i-x" : k === "run" ? "#i-play" : "#i-check");
+  $("statusText").textContent = k === "run" ? "Running" : k === "err" ? (t === "compile error" ? "Compile error" : "Runtime error") : t === "finished" ? "Finished" : "Ready to Run";
+  p.className = "pill" + (k === "run" ? " run" : k === "err" ? " err" : "");
+  $("runPillText").textContent = k === "run" ? "Online" : k === "err" ? "Error" : t === "finished" ? "Finished" : "Idle";
+  $("btnStop").disabled = k !== "run";
+  if(k === "run") setTab("ser");
+  if(k === "err") setTab("out");
+}
+
+function renderBaud(){
+  const sel = +$("baudSel").value;
+  $("baudWrap").classList.toggle("mismatch", sel !== st.baud);
+  $("baudWrap").title = sel !== st.baud ? "Baud ไม่ตรงกับ Serial.begin(" + st.baud + ") ในโค้ด" : "Baud rate ของ Serial Monitor";
+}
+$("baudSel").onchange = () => { renderBaud(); st.rev = -1; };
+
+/* ---------------- console ---------------- */
+function setTab(t){
+  st.tab = t;
+  document.querySelectorAll(".ctab").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("outScreen").classList.toggle("hidden", t !== "out");
+  $("serScreen").classList.toggle("hidden", t !== "ser");
+  if(t === "ser") $("serDot").classList.remove("show");
+  const el = t === "out" ? $("outScreen") : $("serScreen");
+  el.scrollTop = el.scrollHeight;
+}
+document.querySelectorAll(".ctab").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+const esc = (s) => String(s).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" }[c]));
+function renderConsole(){
+  const logs = S.logs();
+  const out = $("outScreen");
+  out.innerHTML = logs.length
+    ? logs.map(l => '<div class="' + (l.cls || "") + '">' + esc(l.text) + '</div>').join("")
+    : '<div class="empty">กด Run เพื่อคอมไพล์และอัปโหลด sketch ไปยังบอร์ดจำลอง</div>';
+  out.scrollTop = out.scrollHeight;
+
+  const ser = $("serScreen");
+  let txt = S.serialText();
+  if(+$("baudSel").value !== st.baud && txt) txt = txt.replace(/[^\n]/g, c => (c === " " ? " " : "�⸮ÿ¤"[c.charCodeAt(0) % 4]));
+  ser.textContent = txt;
+  if(!txt) ser.innerHTML = '<div class="empty">ยังไม่มีข้อมูลจาก Serial</div>';
+  if($("chkAs").checked) ser.scrollTop = ser.scrollHeight;
+  if(txt.length !== st.serLen){ if(st.tab !== "ser" && txt.length > st.serLen) $("serDot").classList.add("show"); st.serLen = txt.length; }
+}
+$("btnClearCon").onclick = () => { if(st.tab === "out") S.UI.clearLog(); else S.UI.clearSerial(); };
+$("btnCopyCon").onclick = () => copyText(st.tab === "out" ? S.logs().map(l => l.text).join("\n") : S.serialText());
+$("btnDlCon").onclick = () => download(st.tab === "out" ? "output.txt" : "serial.txt", st.tab === "out" ? S.logs().map(l => l.text).join("\n") : S.serialText());
+function send(){ const v = $("serIn").value; if(!v) return; S.sendSerial(v); $("serIn").value = ""; setTab("ser"); }
+$("btnSend").onclick = send;
+$("serIn").addEventListener("keydown", (e) => { if(e.key === "Enter") send(); });
+
+/* ---------------- inputs ---------------- */
+const I = S.INPUTS;
+function fill(r){ r.style.setProperty("--p", ((r.value - r.min) / (r.max - r.min) * 100) + "%"); }
+function bindRange(id, valId, key, fmt){
+  const r = $(id);
+  const upd = () => { I[key] = +r.value; $(valId).textContent = fmt(+r.value); fill(r); renderSht(); };
+  r.addEventListener("input", upd); upd();
+  return (v) => { r.value = v; upd(); };
+}
+const setTemp = bindRange("rTemp", "vTemp", "temp", v => v.toFixed(1) + " °C");
+const setHum  = bindRange("rHum", "vHum", "hum", v => v.toFixed(1) + " %");
+const setAdc  = bindRange("rAdc", "vAdc", "adc", v => String(v));
+bindRange("rDelay", "vDelay", "apDelay", v => v + " ms");
+function renderSht(){
+  const on = $("chkSht").checked;
+  $("shtCard").classList.toggle("off", !on);
+  $("shtT").textContent = on ? I.temp.toFixed(1) + " °C" : "-- °C";
+  $("shtH").textContent = on ? I.hum.toFixed(1) + " %" : "-- %";
+  $("knob").style.transform = "rotate(" + (-135 + (I.adc / 4095) * 270) + "deg)";
+}
+$("chkSht").onchange = (e) => { I.shtOn = e.target.checked; renderSht(); };
+$("chkAp").onchange = (e) => { I.apOn = e.target.checked; };
+$("tSsid").oninput = (e) => { I.apSsid = e.target.value; };
+$("tPass").oninput = (e) => { I.apPass = e.target.value; };
+$("chkTs").onchange = (e) => { I.timestamp = e.target.checked; };
+$("chkAs").onchange = (e) => { I.autoscroll = e.target.checked; };
+$("speedSel").onchange = (e) => { S.HW.speed = +e.target.value; };
+S.HW.speed = 1;
+I.shtOn = true; I.apOn = true; I.apSsid = $("tSsid").value; I.apPass = $("tPass").value;
+I.timestamp = true; I.autoscroll = true;
+renderSht();
+
+document.querySelectorAll(".stabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".stabs button").forEach(x => x.classList.toggle("on", x === b));
+  $("pSens").classList.toggle("hidden", b.dataset.stab !== "sens");
+  $("pWifi").classList.toggle("hidden", b.dataset.stab !== "wifi");
+});
+
+/* ---------------- board interaction ---------------- */
+function bindHwBtn(el, which){
+  const down = (e) => { e.preventDefault(); S.unlockAudio(); S.setBtn(which, true); el.setPointerCapture && el.setPointerCapture(e.pointerId); };
+  const up = () => S.setBtn(which, false);
+  el.addEventListener("pointerdown", down);
+  el.addEventListener("pointerup", up);
+  el.addEventListener("pointercancel", up);
+  el.addEventListener("lostpointercapture", up);
+}
+bindHwBtn($("hwA"), "A");
+bindHwBtn($("hwB"), "B");
+$("hwRst").onclick = () => { S.unlockAudio(); S.reset(); };
+
+const pot = $("pot");
+function potMove(e){
+  const r = pot.getBoundingClientRect();
+  const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+  let a = Math.atan2(x, -y) * 180 / Math.PI;
+  a = Math.max(-135, Math.min(135, a));
+  setAdc(Math.round((a + 135) / 270 * 4095));
+}
+pot.addEventListener("pointerdown", (e) => { e.preventDefault(); pot.setPointerCapture(e.pointerId); potMove(e); });
+pot.addEventListener("pointermove", (e) => { if(pot.hasPointerCapture(e.pointerId)) potMove(e); });
+
+/* board scale + zoom */
+const area = $("boardArea"), stage = $("stage"), board = $("board");
+const ZOOMS = [1, 1.35, 1.75];
+function measureBoard(){
+  const w = area.clientWidth, h = area.clientHeight;
+  if(!w || !h) return;
+  st.fit = Math.max(0.35, Math.min((w - 12) / 560, (h - 12) / 500, 1.6));
+  const s = st.fit * st.zoom;
+  board.style.transform = "scale(" + s + ")";
+  stage.style.width = (560 * s) + "px"; stage.style.height = (500 * s) + "px";
+  area.classList.toggle("zoomed", st.zoom > 1);
+  tagEls.forEach((el, i) => { el.style.left = (PARTS[i].x * s) + "px"; el.style.top = (PARTS[i].y * s) + "px"; });
+}
+
+/* part labels: x/y = dot position in board coords (560x500), side = which way the name extends */
+const PARTS = [
+  { x:262, y:92,  side:"r", name:"ESP32 Module", pin:"ESP32-D0WDQ6", desc:"สมองของบอร์ด — ชิป ESP32 dual-core 240MHz พร้อม WiFi/Bluetooth ในตัว โค้ดที่กด Run จะทำงานบนชิปนี้" },
+  { x:355, y:22,  side:"r", name:"SHT31", pin:"I2C 0x44", desc:"เซนเซอร์วัดอุณหภูมิและความชื้น อ่านค่าด้วย <code>sht31.readTemperature()</code> / <code>readHumidity()</code> — ปรับค่าได้ที่แผง Sensors" },
+  { x:401, y:71,  side:"r", name:"Reset (RST)", pin:"EN", desc:"ปุ่มรีเซ็ตบอร์ด กดแล้วโปรแกรมจะเริ่มทำงานจาก <code>setup()</code> ใหม่" },
+  { x:154, y:96,  side:"l", name:"RGB LED", pin:"GPIO 25/26/27", desc:"LED 3 สีแบบ Common Anode — สั่ง <code>LOW</code> = ติด, <code>HIGH</code> = ดับ ใช้ PWM ผสมสีได้" },
+  { x:84,  y:318, side:"l", name:"Pin Header", pin:"GPIO", desc:"ขา I/O สำหรับต่ออุปกรณ์ภายนอกเพิ่มเติม" },
+  { x:280, y:200, side:"r", name:"OLED Display", pin:"I2C 0x3C", desc:"จอ OLED 128×64 (SSD1306) ใช้ไลบรารี Adafruit_SSD1306 — อย่าลืม <code>display.display()</code> หลังวาด" },
+  { x:110, y:250, side:"l", name:"Button A", pin:"GPIO 0", desc:"ปุ่มกด A — กดแล้วอ่านค่าได้ <code>LOW</code> ด้วย <code>digitalRead(0)</code> (คีย์ลัด A)" },
+  { x:450, y:250, side:"r", name:"Button B", pin:"GPIO 4", desc:"ปุ่มกด B — กดแล้วอ่านค่าได้ <code>LOW</code> ด้วย <code>digitalRead(4)</code> (คีย์ลัด B)" },
+  { x:230, y:372, side:"l", name:"Relay 1", pin:"GPIO 32", desc:"รีเลย์ K1 แบบ Active LOW — <code>digitalWrite(32, LOW)</code> = ON" },
+  { x:332, y:372, side:"r", name:"Relay 2", pin:"GPIO 14", desc:"รีเลย์ K2 แบบ Active LOW — <code>digitalWrite(14, LOW)</code> = ON" },
+  { x:150, y:434, side:"l", name:"VR 10K", pin:"A36", desc:"ตัวต้านทานปรับค่าได้ อ่านค่า 0–4095 ด้วย <code>analogRead(36)</code> — ลากหมุนบนบอร์ดหรือใช้สไลเดอร์" },
+  { x:396, y:432, side:"r", name:"Buzzer", pin:"GPIO 33", desc:"ลำโพง Buzzer มีเสียงจริง ใช้ <code>tone()</code> หรือ <code>ledcWriteTone()</code>" },
+  { x:280, y:467, side:"r", name:"USB Port", pin:"UART0", desc:"พอร์ต USB สำหรับอัปโหลดโค้ดและสื่อสาร Serial (ดูผลที่ Serial Monitor)" }
+];
+const tagBox = $("tags");
+const tagEls = PARTS.map((p, i) => {
+  const el = document.createElement("div");
+  el.className = "tag" + (p.side === "l" ? " l" : "");
+  el.innerHTML = '<span class="pt"></span><span class="nm"></span>';
+  el.querySelector(".nm").textContent = p.name;
+  el.onclick = (e) => { e.stopPropagation(); showPart(i); };
+  tagBox.appendChild(el);
+  return el;
+});
+function showPart(i){
+  const p = PARTS[i];
+  tagEls.forEach((el, j) => el.classList.toggle("sel", j === i));
+  $("piName").textContent = p.name;
+  $("piPin").textContent = p.pin;
+  $("piDesc").innerHTML = p.desc;
+  $("partInfo").classList.add("open");
+}
+function hidePart(){ $("partInfo").classList.remove("open"); tagEls.forEach(el => el.classList.remove("sel")); }
+$("partClose").onclick = hidePart;
+function setTags(on){
+  tagBox.classList.toggle("show", on);
+  $("btnTags").classList.toggle("on", on);
+  if(!on) hidePart();
+  store.set("tags", on ? "1" : "0");
+}
+$("btnTags").onclick = () => setTags(!tagBox.classList.contains("show"));
+setTags(store.get("tags") === "1");
+$("btnZoom").onclick = () => {
+  const i = (ZOOMS.indexOf(st.zoom) + 1) % ZOOMS.length;
+  st.zoom = ZOOMS[i];
+  $("zoomText").textContent = st.zoom === 1 ? "Zoom" : Math.round(st.zoom * 100) + "%";
+  measureBoard();
+  if(st.zoom > 1){ area.scrollLeft = (area.scrollWidth - area.clientWidth) / 2; area.scrollTop = (area.scrollHeight - area.clientHeight) / 2; }
+};
+if(window.ResizeObserver) new ResizeObserver(measureBoard).observe(area);
+window.addEventListener("resize", measureBoard);
+measureBoard();
+
+/* ---------------- run controls ---------------- */
+$("btnRun").onclick = () => S.run();
+$("btnStop").onclick = () => S.stop();
+$("btnReset").onclick = () => S.reset();
+
+window.addEventListener("keydown", (e) => {
+  const k = e.key.toLowerCase();
+  if((e.ctrlKey || e.metaKey) && (k === "r" || k === "enter")){ e.preventDefault(); S.run(); return; }
+  if((e.ctrlKey || e.metaKey) && k === "."){ e.preventDefault(); S.stop(); return; }
+  if((e.ctrlKey || e.metaKey) && k === "s"){ e.preventDefault(); download("main.ino", code.value); return; }
+  if(k === "escape"){ closeHelp(); return; }
+  const tag = (e.target.tagName || "").toUpperCase();
+  if(tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT" || e.ctrlKey || e.metaKey || e.altKey) return;
+  if(k === "l" && !e.repeat){ $("btnTags").click(); return; }
+  if(k === "a" && !e.repeat) S.setBtn("A", true);
+  if(k === "b" && !e.repeat) S.setBtn("B", true);
+});
+window.addEventListener("keyup", (e) => {
+  const k = e.key.toLowerCase();
+  if(k === "a") S.setBtn("A", false);
+  if(k === "b") S.setBtn("B", false);
+});
+window.addEventListener("click", () => S.unlockAudio(), { once:true });
+
+/* help modal */
+function openHelp(){ $("helpModal").classList.add("open"); }
+function closeHelp(){ $("helpModal").classList.remove("open"); }
+$("btnHelp").onclick = openHelp;
+$("helpModal").addEventListener("click", (e) => { if(e.target === e.currentTarget || e.target.closest("[data-close]")) closeHelp(); });
+
+/* ---------------- render loop ---------------- */
+const PIN_NAMES = { R:"RGB · Red", G:"RGB · Green", B:"RGB · Blue", A:"ปุ่ม A", K1:"Relay 1", K2:"Relay 2", BUZ:"Buzzer", VR:"VR / LDR" };
+let pinRows = null;
+function renderPins(chips){
+  const list = chips.filter(c => c.k !== "millis" && c.k !== "WiFi").map(c => {
+    const [pin, nm] = c.k.split(" ");
+    const name = pin === "D4" ? "ปุ่ม B" : (PIN_NAMES[nm] || nm);
+    return { pin, name, v:c.v, hi:c.hi };
+  });
+  const box = $("pinList");
+  if(!pinRows || pinRows.length !== list.length){
+    box.innerHTML = list.map(() => '<div class="pin-row"><div><b></b><small></small></div><span class="d"></span><span class="v"></span></div>').join("");
+    pinRows = Array.from(box.children);
+  }
+  list.forEach((p, i) => {
+    const r = pinRows[i];
+    r.className = "pin-row" + (p.hi ? " hi" : "");
+    r.querySelector("b").textContent = p.pin;
+    r.querySelector("small").textContent = p.name;
+    r.querySelector(".v").textContent = p.v === "off" ? "OFF" : p.v;
+  });
+}
+function renderBoard(s){
+  const led = $("rgbLed"); led.style.background = s.rgbCss; led.style.boxShadow = s.rgbGlow;
+  [["relay1", s.relay1], ["relay2", s.relay2]].forEach(([id, on]) => {
+    const el = $(id); el.classList.toggle("on", on);
+    el.querySelector(".st").textContent = on ? "ON" : "OFF";
+    el.querySelector(".led").classList.toggle("on", on);
+  });
+  $("buzzer").classList.toggle("on", s.tone > 0);
+  $("hwA").className = "hwbtn " + (s.btnA ? "down" : "up");
+  $("hwB").className = "hwbtn " + (s.btnB ? "down" : "up");
+  $("millis").textContent = "millis " + s.millis;
+  $("wifiPillText").textContent = s.wifi;
+  $("wifiPill").className = "pill mono" + (s.wifiOk ? " run" : "");
+  $("apState").textContent = s.wifi;
+  $("apState").style.color = s.wifiOk ? "var(--green)" : "";
+  renderPins(s.chips);
+}
+let last = 0;
+function tick(t){
+  requestAnimationFrame(tick);
+  if(t - last < 80) return;
+  last = t;
+  const s = S.snapshot();
+  const p = st.snap;
+  if(!p || p.rgbCss !== s.rgbCss || p.relay1 !== s.relay1 || p.relay2 !== s.relay2 || p.tone !== s.tone ||
+     p.btnA !== s.btnA || p.btnB !== s.btnB || p.wifi !== s.wifi || p.millis !== s.millis || p.adc !== s.adc){
+    renderBoard(s); st.snap = s;
+  }
+  if(S.rev() !== st.rev){ st.rev = S.rev(); renderConsole(); }
+}
+renderStatus();
+renderBaud();
+requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

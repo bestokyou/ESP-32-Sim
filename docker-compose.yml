@@ -1,6 +1,8 @@
 services:
-  esp32-simulator:
+  esp32-sim:
     build: .
     ports:
       - "8080:80"
+    volumes:
+      - ./:/usr/share/nginx/html:ro
     restart: unless-stopped

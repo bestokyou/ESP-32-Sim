@@ -1,3 +1,6 @@
 Dockerfile
-docker-compose.yml
 .dockerignore
+docker-compose.yml
+.git
+.thumbnail
+.claude
