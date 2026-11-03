@@ -8,6 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="./sim-engine.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 <style>
 :root{
   --bg:#eaf1fb; --bg-a:#dfe9f8; --bg-b:#f6f9fe;
@@ -195,6 +203,7 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .board-area::before{ content:""; position:absolute; left:50%; top:50%; width:min(92%,640px); aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.55) 0,rgba(255,255,255,.2) 45%,transparent 70%); border:1px solid rgba(255,255,255,.5); pointer-events:none; }
 :root[data-theme="dark"] .board-area::before{ background:radial-gradient(circle,rgba(70,120,220,.18),transparent 70%); border-color:rgba(255,255,255,.05); }
 .stage{ position:relative; flex:0 0 auto; }
+#board3d-canvas{ position:absolute; left:0; top:0; width:100%; height:100%; border-radius:12px; touch-action:none; }
 .board{ position:absolute; left:0; top:0; width:560px; height:500px; transform-origin:0 0; font-family:"JetBrains Mono",monospace; }
 .board .pcb{ position:absolute; inset:0; filter:drop-shadow(0 26px 30px rgba(20,60,140,.35)); }
 .lbl{ position:absolute; font-size:9.5px; color:#cfe2ff; letter-spacing:.3px; white-space:nowrap; opacity:.92; }
@@ -503,6 +512,9 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
             <span class="sep"></span>
             <button id="btnZoom" title="ซูม"><svg class="i" style="width:16px;height:16px"><use href="#i-zoom"/></svg><span class="lbl-t" id="zoomText">Zoom</span></button>
             <span class="sep"></span>
+            <button id="btn3d" title="สลับมุมมอง 3D"><svg class="i" style="width:16px;height:16px"><use href="#i-cube"/></svg><span class="lbl-t">3D View</span></button>
+            <button id="btnReset3d" title="รีเซ็ตมุมกล้อง 3D" style="display:none"><svg class="i" style="width:16px;height:16px"><use href="#i-reset"/></svg><span class="lbl-t">Reset View</span></button>
+            <span class="sep"></span>
             <button id="btnFsBoard" title="เต็มจอ"><svg class="i" style="width:16px;height:16px"><use href="#i-expand"/></svg></button>
           </div>
         </div>
@@ -559,6 +571,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                 <div class="usb"></div>
               </div>
               <div class="tags" id="tags"></div>
+              <canvas id="board3d-canvas" style="display:none"></canvas>
             </div>
             <div class="part-info" id="partInfo">
               <button class="icon-btn" id="partClose" title="ปิด"><svg class="i"><use href="#i-x"/></svg></button>
@@ -997,6 +1010,7 @@ const PARTS = [
   { x:396, y:432, side:"r", name:"Buzzer", pin:"GPIO 33", desc:"ลำโพง Buzzer มีเสียงจริง ใช้ <code>tone()</code> หรือ <code>ledcWriteTone()</code>" },
   { x:280, y:467, side:"r", name:"USB Port", pin:"UART0", desc:"พอร์ต USB สำหรับอัปโหลดโค้ดและสื่อสาร Serial (ดูผลที่ Serial Monitor)" }
 ];
+window.PARTS = PARTS; // ให้ board3d.js (ES module แยกไฟล์) อ่านตำแหน่ง/ชื่อชิ้นส่วนชุดเดียวกับ 2D
 const tagBox = $("tags");
 const tagEls = PARTS.map((p, i) => {
   const el = document.createElement("div");
@@ -1015,6 +1029,7 @@ function showPart(i){
   $("piDesc").innerHTML = p.desc;
   $("partInfo").classList.add("open");
 }
+window.showPart = showPart; // ให้ board3d.js เรียก popover เดิมตรงๆ เมื่อคลิกชิ้นส่วนใน 3D
 function hidePart(){ $("partInfo").classList.remove("open"); tagEls.forEach(el => el.classList.remove("sel")); }
 $("partClose").onclick = hidePart;
 function setTags(on){
@@ -1031,6 +1046,7 @@ $("btnZoom").onclick = () => {
   $("zoomText").textContent = st.zoom === 1 ? "Zoom" : Math.round(st.zoom * 100) + "%";
   measureBoard();
   if(st.zoom > 1){ area.scrollLeft = (area.scrollWidth - area.clientWidth) / 2; area.scrollTop = (area.scrollHeight - area.clientHeight) / 2; }
+  else{ area.scrollLeft = 0; area.scrollTop = 0; }
 };
 if(window.ResizeObserver) new ResizeObserver(measureBoard).observe(area);
 window.addEventListener("resize", measureBoard);
@@ -1116,11 +1132,58 @@ function tick(t){
      p.btnA !== s.btnA || p.btnB !== s.btnB || p.wifi !== s.wifi || p.millis !== s.millis || p.adc !== s.adc){
     renderBoard(s); st.snap = s;
   }
+  if(window.__board3dTick) window.__board3dTick(s); // sync มุมมอง 3D (ถ้าเปิดอยู่) ทุกเฟรม — OLED ต้องอัปเดตแม้ฟิลด์อื่นไม่เปลี่ยน
   if(S.rev() !== st.rev){ st.rev = S.rev(); renderConsole(); }
 }
 renderStatus();
 renderBaud();
 requestAnimationFrame(tick);
+})();
+</script>
+
+<!-- ชั้น 3D เสริม (Three.js) — ดู board3d.js / 3D-SIMULATOR-PLAN.md Phase A
+     แยกเป็น ES module ของตัวเอง สื่อสารกับสคริปต์หลักข้างบนผ่าน window.PARTS / window.showPart
+     (ที่ expose ไว้แล้ว) และ window.__board3dTick (tick() ข้างบนเรียกทุกเฟรม) -->
+<script type="module">
+import { initBoard3D } from "./board3d.js";
+(function(){
+  "use strict";
+  const canvas = document.getElementById("board3d-canvas");
+  const btn3d = document.getElementById("btn3d");
+  const btnReset3d = document.getElementById("btnReset3d");
+  const boardEl = document.getElementById("board");
+
+  let board3d = null;
+  let visible = false;
+
+  function ensure(){
+    if(!board3d){
+      board3d = initBoard3D(canvas, {
+        getParts: () => window.PARTS || [],
+        onSelect: (i) => { if(window.showPart) window.showPart(i); },
+        getOledCanvas: () => document.getElementById("oled")
+      });
+    }
+    return board3d;
+  }
+
+  btn3d.onclick = () => {
+    visible = !visible;
+    btn3d.classList.toggle("on", visible);
+    btnReset3d.style.display = visible ? "" : "none";
+    if(visible){
+      boardEl.style.display = "none";
+      canvas.style.display = "";
+      ensure().show();
+    } else {
+      canvas.style.display = "none";
+      boardEl.style.display = "";
+      if(board3d) board3d.hide();
+    }
+  };
+  btnReset3d.onclick = () => { if(board3d) board3d.resetView(); };
+
+  window.__board3dTick = (snapshot) => { if(visible && board3d) board3d.update(snapshot); };
 })();
 </script>
 </body>
