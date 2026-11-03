@@ -15,6 +15,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { OutlinePass } from "three/addons/postprocessing/OutlinePass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { PART_NAMES_3D } from "./board3d-parts-map.js";
 
 /* พิกัดบอร์ด 2D เดิมใน index.html คือ 560×500 px (ดู <svg class="pcb" viewBox="0 0 560 500">) */
@@ -171,18 +175,104 @@ function getPinStripTexture() {
  * ที่ export จาก Blender ตอนนี้เป็นค่า default ของ Principled BSDF ล้วนๆ (roughness 0.5,
  * metalness 0 แทบทุกชิ้น) ยังไม่ได้ปรับให้เข้ากับวัสดุจริงของแต่ละชิ้น */
 const PART_MATERIAL_HINTS = {
-  RELAY1: { roughness: 0.65, metalness: 0.1 },
-  RELAY2: { roughness: 0.65, metalness: 0.1 },
-  BUZZER: { roughness: 0.35, metalness: 0.7 },
-  BTN_A: { roughness: 0.5, metalness: 0.0 },
-  BTN_B: { roughness: 0.5, metalness: 0.0 },
-  POT_VR: { roughness: 0.4, metalness: 0.2 },
-  SHT31_Sensor: { roughness: 0.5, metalness: 0.0 },
-  ESP32_Board: { roughness: 0.45, metalness: 0.35 },
+  RELAY1: { roughness: 0.8, metalness: 0.0 },
+  RELAY2: { roughness: 0.8, metalness: 0.0 },
+  BUZZER: { roughness: 0.82, metalness: 0.0 }, // ตัวเรือนพลาสติกดำ ไม่ใช่โลหะ
+  BTN_A: { roughness: 0.8, metalness: 0.0 },
+  BTN_B: { roughness: 0.8, metalness: 0.0 },
+  POT_VR: { roughness: 0.7, metalness: 0.0 },
+  SHT31_Sensor: { roughness: 0.65, metalness: 0.0 },
+  ESP32_Board: { roughness: 0.6, metalness: 0.1 },
   USB_Port: { roughness: 0.3, metalness: 0.6 },
-  RST_Button: { roughness: 0.55, metalness: 0.0 },
-  GPIO_Header: { roughness: 0.4, metalness: 0.4 },
+  RST_Button: { roughness: 0.8, metalness: 0.0 },
+  GPIO_Header: { roughness: 0.78, metalness: 0.0 }, // ฐานพลาสติก — ตัวพินเป็น object แยก (GPIO_Header_Pins)
 };
+
+/* ผิวพลาสติกด้านมีเกรน (textured plastic) สำหรับชิ้นสีเข้ม — normal map เป็นหลุมนูนละเอียด + roughness
+ * แปรผันตามลายเดียวกัน ทำจาก value noise แบบ tile ได้ (ต่อขอบซ้ายขวา/บนล่างไม่เห็นรอยต่อ) */
+let _plasticTex = null;
+
+function makePlasticTextures() {
+  const size = 256, cells = 48;
+  const grid = new Float32Array(cells * cells).map(() => Math.random());
+  const g = (x, y) => grid[((y + cells) % cells) * cells + ((x + cells) % cells)];
+  const smooth = (t) => t * t * (3 - 2 * t);
+  const h = new Float32Array(size * size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const fx = (x / size) * cells, fy = (y / size) * cells;
+      const ix = Math.floor(fx), iy = Math.floor(fy), tx = smooth(fx - ix), ty = smooth(fy - iy);
+      const a = g(ix, iy) + (g(ix + 1, iy) - g(ix, iy)) * tx;
+      const b = g(ix, iy + 1) + (g(ix + 1, iy + 1) - g(ix, iy + 1)) * tx;
+      h[y * size + x] = a + (b - a) * ty + (Math.random() - 0.5) * 0.25; // เกรนใหญ่ + เกรนละเอียดระดับ pixel
+    }
+  }
+  const at = (x, y) => h[((y + size) % size) * size + ((x + size) % size)];
+  const nc = document.createElement("canvas"), rc = document.createElement("canvas");
+  nc.width = nc.height = rc.width = rc.height = size;
+  const nImg = nc.getContext("2d").createImageData(size, size), rImg = rc.getContext("2d").createImageData(size, size);
+  const k = 2.2; // ความชันของหลุมนูน
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dx = (at(x + 1, y) - at(x - 1, y)) * k, dy = (at(x, y + 1) - at(x, y - 1)) * k;
+      const len = Math.hypot(dx, dy, 1), i = (y * size + x) * 4;
+      nImg.data[i] = (-dx / len * 0.5 + 0.5) * 255;
+      nImg.data[i + 1] = (dy / len * 0.5 + 0.5) * 255;
+      nImg.data[i + 2] = (1 / len * 0.5 + 0.5) * 255;
+      nImg.data[i + 3] = 255;
+      const r = clamp255((0.8 + (at(x, y) - 0.5) * 0.18) * 255); // roughness ราว 0.7–0.9
+      rImg.data[i] = rImg.data[i + 1] = rImg.data[i + 2] = r;
+      rImg.data[i + 3] = 255;
+    }
+  }
+  nc.getContext("2d").putImageData(nImg, 0, 0);
+  rc.getContext("2d").putImageData(rImg, 0, 0);
+  const normal = new THREE.CanvasTexture(nc), rough = new THREE.CanvasTexture(rc);
+  [normal, rough].forEach((t) => { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; });
+  return { normal, rough };
+}
+
+function getPlasticTextures() {
+  if (!_plasticTex) _plasticTex = makePlasticTextures();
+  return _plasticTex;
+}
+
+/* UV แบบ box projection ตามทิศ normal ของแต่ละ vertex ที่ความหนาแน่นคงที่ (1 tile ต่อ PLASTIC_TILE เมตร)
+ * — planar จากด้านบนอย่างเดียว (ensurePlanarUV) จะยืดลายบนด้านข้างของชิ้นเป็นเส้นๆ และขนาดเกรน
+ * จะไม่เท่ากันระหว่างชิ้นเล็กกับชิ้นใหญ่ */
+const PLASTIC_TILE = 0.006;
+function ensureBoxUV(geometry) {
+  if (!geometry || geometry.attributes.uv || !geometry.attributes.normal) return;
+  const pos = geometry.attributes.position, nor = geometry.attributes.normal;
+  const uvs = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const ax = Math.abs(nor.getX(i)), ay = Math.abs(nor.getY(i)), az = Math.abs(nor.getZ(i));
+    const [u, v] = ay >= ax && ay >= az ? [pos.getX(i), pos.getZ(i)] : ax >= az ? [pos.getZ(i), pos.getY(i)] : [pos.getX(i), pos.getY(i)];
+    uvs[i * 2] = u / PLASTIC_TILE;
+    uvs[i * 2 + 1] = v / PLASTIC_TILE;
+  }
+  geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+}
+
+/* ชิ้นสีเข้มที่ไม่ใช่โลหะ (ปุ่ม, buzzer, relay, ฐาน header, ขั้วต่อ ฯลฯ) → พลาสติกด้านมีเกรน
+ * ลดแสงสะท้อนจาก environment ลงด้วย ไม่งั้นแม้ roughness สูงก็ยังดูเคลือบเงาจากภาพห้องจำลอง */
+function applyPlasticFinish(mesh) {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const dark = materials.filter((m) => m && m.isMeshStandardMaterial && !m.map && m.metalness < 0.3 &&
+    Math.max(m.color.r, m.color.g, m.color.b) < 0.25);
+  if (!dark.length) return;
+  ensureBoxUV(mesh.geometry);
+  const { normal, rough } = getPlasticTextures();
+  dark.forEach((m) => {
+    m.roughness = 1.0; // roughnessMap คูณกับค่านี้ → ได้ราว 0.7–0.9 ตามลาย
+    m.roughnessMap = rough;
+    m.metalness = 0;
+    m.normalMap = normal;
+    m.normalScale.set(0.35, 0.35);
+    m.envMapIntensity = 0.6;
+    m.needsUpdate = true;
+  });
+}
 
 /* mesh จาก Blender export ไม่ได้ UV-unwrap มาด้วย (geometry.attributes.uv ไม่มีเลย) ถ้าไม่สร้าง UV
  * เองก่อน การใส่ map/roughnessMap จะไม่เห็นผลอะไรเลย (สุ่มตัวอย่าง texture จากจุดเดียวซ้ำๆ จนดูเป็น
@@ -301,24 +391,27 @@ function makePrimitiveBoardBase() {
 
 /**
  * @param {HTMLCanvasElement} canvas
- * @param {{ getParts: () => Array, onSelect: (i:number) => void, getOledCanvas: () => HTMLCanvasElement|null }} hooks
- * @returns {{ show():void, hide():void, update(snapshot):void, resetView():void, dispose():void }}
+ * @param {{ getParts: () => Array, onSelect: (i:number) => void, getOledCanvas: () => HTMLCanvasElement|null,
+ *           onLabels?: (pts: Array<{index:number, x:number, y:number, visible:boolean}>) => void }} hooks
+ * @returns {{ show():void, hide():void, update(snapshot):void, resetView():void, setTheme(name:"light"|"dark"):void, dispose():void }}
  */
 export function initBoard3D(canvas, hooks) {
-  const { getParts, onSelect, getOledCanvas } = hooks;
+  const { getParts, onSelect, getOledCanvas, onLabels } = hooks;
 
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   // ปรับ tone mapping/color space ให้ใกล้เคียงตาจริง — ไม่งั้นภาพจาก MeshStandardMaterial
   // จะดู "จืด" เพราะค่าสีไม่ถูก roll-off โทนสว่าง/มืดแบบกล้องจริง
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  // Neutral (Khronos PBR Neutral) แทน ACES — ทุก pixel ผ่าน tone mapping ที่ OutputPass (รวมถึง RGB LED
+  // ซึ่งตั้ง toneMapped=false ไว้ก็ไม่มีผลเมื่อวาดผ่าน composer) และ ACES บิดสีอิ่มตัว: น้ำเงินเป็นม่วง แดงเป็นส้ม
+  // Neutral คงเฉดสีเดิมไว้ บีบเฉพาะส่วนที่สว่างจัดเท่านั้น
+  renderer.toneMapping = THREE.NeutralToneMapping;
+  renderer.toneMappingExposure = 1.0;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x12192b);
   // Image-based lighting จาก "ห้องจำลอง" (RoomEnvironment) — แหล่งกำเนิดแสงจริงอย่างเดียว
   // (ambient/directional) ทำให้พื้นผิว PBR เรียบเป็นสีตันไม่มีมิติ เพราะไม่มี reflection ให้มองเห็น
   // ทรงของวัตถุ ส่วนนี้คือสิ่งที่แก้ปัญหา "ดูแบน ไม่มีมิติ" ได้มากที่สุด
@@ -360,26 +453,116 @@ export function initBoard3D(canvas, hooks) {
   fillLight.position.set(-0.2, 0.18, -0.12);
   scene.add(fillLight);
 
-  const partGroup = new THREE.Group(); // ชิ้นส่วน primitive (fallback) + hitbox ทั้งหมด
+  /* ---------------- พื้นตารางแบบ viewport ของ Blender ---------------- */
+  // วาดเส้นด้วย shader (fwidth) แทน GridHelper — เส้นคมเท่ากันทุกระยะ ไม่กะพริบ และจางหายตามระยะ
+  // เหมือนพื้นใน Blender: เส้นย่อยทุก 1 ซม. เส้นหลักทุก 10 ซม. แกน X แดง / แกน Y (ของ Blender = Z ของ three) เขียว
+  const groundGroup = new THREE.Group();
+  scene.add(groundGroup);
+
+  const gridMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    extensions: { derivatives: true },
+    uniforms: {
+      uMinor: { value: new THREE.Color() },
+      uMajor: { value: new THREE.Color() },
+      uAxisX: { value: new THREE.Color() },
+      uAxisZ: { value: new THREE.Color() },
+      uMinorStep: { value: 0.01 },
+      uMajorStep: { value: 0.1 },
+    },
+    vertexShader: `
+      varying vec3 vWorld;
+      void main() {
+        vec4 w = modelMatrix * vec4(position, 1.0);
+        vWorld = w.xyz;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: `
+      uniform vec3 uMinor, uMajor, uAxisX, uAxisZ;
+      uniform float uMinorStep, uMajorStep;
+      varying vec3 vWorld;
+      // จางเส้นออกเมื่อช่องตารางเล็กกว่าไม่กี่ pixel (มุมเอียง/ระยะไกล) — ไม่งั้นเส้นถี่เกิน pixel
+      // จะเกิด moire กะพริบตอนกล้องขยับ (แบบเดียวกับที่ Blender ซ่อนระดับตารางที่ละเอียดเกินไป)
+      float gridLine(vec2 p, float stepSize, float width) {
+        vec2 c = p / stepSize;
+        vec2 d = fwidth(c);
+        vec2 g = abs(fract(c - 0.5) - 0.5) / d;
+        float line = 1.0 - min(min(g.x, g.y) / width, 1.0);
+        return line * (1.0 - smoothstep(0.12, 0.3, max(d.x, d.y)));
+      }
+      float axisLine(float v, float width) {
+        return 1.0 - min(abs(v) / (max(fwidth(v), 1e-6) * width), 1.0);
+      }
+      void main() {
+        float dist = length(cameraPosition - vWorld);
+        float minor = gridLine(vWorld.xz, uMinorStep, 1.0) * (1.0 - smoothstep(0.3, 0.9, dist));
+        float major = gridLine(vWorld.xz, uMajorStep, 1.4);
+        float ax = axisLine(vWorld.z, 1.6);
+        float az = axisLine(vWorld.x, 1.6);
+        vec3 col = mix(uMinor, uMajor, major);
+        float a = max(minor * 0.8, major);
+        col = mix(col, uAxisX, ax); a = max(a, ax);
+        col = mix(col, uAxisZ, az); a = max(a, az);
+        gl_FragColor = vec4(col, a * (1.0 - smoothstep(0.35, 1.6, dist)));
+      }`,
+  });
+  const grid = new THREE.Mesh(new THREE.PlaneGeometry(6, 6), gridMat);
+  grid.rotation.x = -Math.PI / 2;
+  grid.renderOrder = 1;
+  groundGroup.add(grid);
+
+  // เงาของบอร์ดตกลงบนพื้น (ShadowMaterial โปร่งใส เห็นแค่เงา) ให้บอร์ดดูวางอยู่บนพื้นจริง ไม่ลอย
+  // พื้นเงากับตารางอยู่ระนาบเดียวกัน — ถ้าพื้นเงาเขียน depth ตารางจะ z-fight กับมันจนกะพริบ
+  // จึงปิด depthWrite แล้วกำหนดลำดับวาดเอง (เงาก่อน ตารางทับ) แทน
+  const shadowMat = new THREE.ShadowMaterial({ opacity: 0.3, depthWrite: false });
+  const shadowFloor = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), shadowMat);
+  shadowFloor.rotation.x = -Math.PI / 2;
+  shadowFloor.receiveShadow = true;
+  shadowFloor.renderOrder = 0;
+  groundGroup.add(shadowFloor);
+
+  // วางพื้นไว้ใต้จุดต่ำสุดของโมเดล (เรียกหลังโหลดเสร็จ — ใต้บอร์ดอาจมีขา pin ยื่นลงมา)
+  function fitGround() {
+    const box = new THREE.Box3();
+    scene.children.forEach((o) => { if (o !== groundGroup) box.expandByObject(o); });
+    if (!box.isEmpty()) groundGroup.position.y = box.min.y - 0.0003;
+  }
+
+  // โทนสีตามธีมของหน้าเว็บ (data-theme บน <html>) — สีเทากลางแบบ Blender ในโหมดมืด, เทาอ่อนในโหมดสว่าง
+  const THEMES = {
+    dark:  { bg: 0x393939, minor: 0x4a4a4a, major: 0x5e5e5e, axisX: 0xc8414f, axisZ: 0x6f9a2b, shadow: 0.35 },
+    light: { bg: 0xeef1f5, minor: 0xd8dde4, major: 0xb9c1cc, axisX: 0xe0525f, axisZ: 0x7fb23a, shadow: 0.16 },
+  };
+  function setTheme(name) {
+    const t = THEMES[name] || THEMES.light;
+    scene.background = new THREE.Color(t.bg);
+    gridMat.uniforms.uMinor.value.set(t.minor);
+    gridMat.uniforms.uMajor.value.set(t.major);
+    gridMat.uniforms.uAxisX.value.set(t.axisX);
+    gridMat.uniforms.uAxisZ.value.set(t.axisZ);
+    shadowMat.opacity = t.shadow;
+    renderOnce();
+  }
+
+  const partGroup = new THREE.Group(); // ชิ้นส่วน primitive (fallback) ทั้งหมด
   scene.add(partGroup);
 
   const byName = new Map(); // name3d -> visual mesh (จากโมเดลจริงหรือ primitive สำรอง)
-  const pickables = []; // { hitbox, visualMesh, index }
+  const pickables = []; // { visualMesh, index, anchor }
   const oledState = { texture: null };
 
-  function addHitbox(name3d, index, x, z) {
-    const hitbox = new THREE.Mesh(
-      new THREE.BoxGeometry(0.022, 0.022, 0.022),
-      new THREE.MeshBasicMaterial({ visible: false })
-    );
-    hitbox.position.set(x, 0.008, z);
-    hitbox.name = name3d + "_hitbox";
-    partGroup.add(hitbox);
+  // pick จากรูปทรงจริงของชิ้นส่วน — เดิมใช้ hitbox ลูกบาศก์ 22มม. วางตามพิกัด 2D ซึ่งใหญ่กว่า
+  // ชิ้นเล็กๆ (LED/ปุ่ม) ซ้อนทับชิ้นข้างเคียง และพอมองเอียงๆ ก็ยื่นออกนอกตัวชิ้น ทำให้เมาส์ไม่ตรงก็ไฮไลต์
+  function addPickable(name3d, index) {
     const visualMesh = byName.get(name3d);
-    // เก็บสเกลตั้งต้นไว้ เพราะโมเดลจาก Blender อาจมี object scale ไม่เท่ากับ 1 อยู่แล้ว
-    // (เช่นผู้ใช้ปรับขนาดชิ้นส่วนเองใน Blender โดยไม่ได้ Apply Scale ก่อน export)
-    // ถ้า hover แล้วเซ็ตสเกลทับเป็นค่าตายตัว จะทำให้ขนาดที่ปรับไว้หายไปตอนเมาส์ออก
-    pickables.push({ hitbox, visualMesh, index, baseScale: visualMesh.scale.clone() });
+    // anchor = กึ่งกลางผิวบนของชิ้น ใช้วางจุดป้ายชื่อ (ปุ่ม "รายละเอียด") ให้ตรงกับโมเดล 3D
+    // ต้อง update matrix ทั้งฉากก่อน เพราะ Box3.setFromObject ไม่อัปเดต matrix ของ parent ให้
+    scene.updateMatrixWorld();
+    const box = new THREE.Box3().setFromObject(visualMesh);
+    const anchor = box.getCenter(new THREE.Vector3());
+    anchor.y = box.max.y;
+    pickables.push({ visualMesh, index, anchor });
   }
 
   /* ---------------- Phase A fallback: สร้าง primitive geometry ล้วนๆ ---------------- */
@@ -407,7 +590,7 @@ export function initBoard3D(canvas, hooks) {
       mesh.name = name3d;
       partGroup.add(mesh);
       byName.set(name3d, mesh);
-      addHitbox(name3d, i, x, z);
+      addPickable(name3d, i);
     });
   }
 
@@ -463,8 +646,10 @@ export function initBoard3D(canvas, hooks) {
         });
       }
 
+      applyPlasticFinish(o); // ก่อน applyProceduralTexture — ใส่ UV/roughnessMap ของตัวเองไว้แล้ว อันหลังจะข้ามไป
       applyProceduralTexture(o, { roughnessMap: getNoiseRoughnessTexture() });
-      if (o.name === "GPIO_Header") applyProceduralTexture(o, { map: getPinStripTexture(), tintWhite: true });
+      // ลาย pin-strip เป็นของแทนพินจริง — โมเดลที่มี GPIO_Header_Pins แล้วไม่ต้องใช้ (จะกลายเป็นแถบเงินทับพลาสติก)
+      if (o.name === "GPIO_Header" && !root.getObjectByName("GPIO_Header_Pins")) applyProceduralTexture(o, { map: getPinStripTexture(), tintWhite: true });
     });
 
     const parts = getParts();
@@ -495,24 +680,25 @@ export function initBoard3D(canvas, hooks) {
       if (name3d === "OLED_Screen") wireOled(mesh, foundInGltf);
 
       byName.set(name3d, mesh);
-      addHitbox(name3d, i, x, z);
+      addPickable(name3d, i);
     });
   }
 
   function loadModel() {
     new GLTFLoader().load(
       MODEL_URL,
-      (gltf) => buildFromGLTF(gltf),
+      (gltf) => { buildFromGLTF(gltf); fitGround(); },
       undefined,
       (err) => {
         console.warn("[board3d] โหลด " + MODEL_URL + " ไม่สำเร็จ — ใช้ primitive geometry (Phase A) แทนทั้งหมด:", err);
         buildPrimitives();
+        fitGround();
       }
     );
   }
   loadModel();
 
-  /* ---------------- raycasting: hover highlight + click → showPart(i) เดิม ---------------- */
+  /* ---------------- raycasting: outline highlight + click → showPart(i) เดิม ---------------- */
   const raycaster = new THREE.Raycaster();
   const pointerNDC = new THREE.Vector2();
   let hovered = null;
@@ -522,20 +708,34 @@ export function initBoard3D(canvas, hooks) {
     pointerNDC.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     pointerNDC.y = -((clientY - rect.top) / rect.height) * 2 + 1;
     raycaster.setFromCamera(pointerNDC, camera);
-    const hits = raycaster.intersectObjects(pickables.map((p) => p.hitbox), false);
-    if (!hits.length) return null;
-    return pickables.find((p) => p.hitbox === hits[0].object) || null;
+    // ยิงใส่ทั้งฉาก แล้วดูแค่สิ่งแรกที่โดน — ถ้าเป็น PCB หรือชิ้นที่บังอยู่ด้านหน้า ก็ไม่ไฮไลต์ชิ้นที่อยู่ด้านหลัง
+    // node ใน glTF อาจเป็น Group ที่มี mesh ลูกหลายชิ้น จึงไล่ขึ้นไปหา parent ที่ตรงกับ visualMesh
+    const hits = raycaster.intersectObject(scene, true);
+    for (let o = hits.length ? hits[0].object : null; o; o = o.parent) {
+      const entry = pickables.find((p) => p.visualMesh === o);
+      if (entry) return entry;
+    }
+    return null;
   }
 
-  const HOVER_SCALE = 1.06; // ไฮไลต์แบบขยายเล็กน้อย — ค่าเดิม 1.15 ใหญ่เกินไปจนรู้สึกกระตุก
+  // ไฮไลต์ชิ้นที่ชี้ด้วยเส้นขอบ (OutlinePass) แทนการขยายสเกล — ไม่ไปแตะ transform ของโมเดล
+  // และได้ขอบตาม silhouette จริง ไม่ใช่เส้น edge ทุกเส้นของ mesh (ชิ้นจาก Blender มีรายละเอียดเยอะ)
+  // render target ใส่ MSAA (samples) เอง เพราะ antialias ของ renderer ไม่มีผลเมื่อวาดผ่าน composer
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+  composer.addPass(new RenderPass(scene, camera));
+  const outlinePass = new OutlinePass(new THREE.Vector2(1, 1), scene, camera);
+  outlinePass.visibleEdgeColor.set(0x4a95ff);
+  outlinePass.hiddenEdgeColor.set(0x1d4fb8);
+  outlinePass.edgeStrength = 5;
+  outlinePass.edgeThickness = 1;
+  outlinePass.edgeGlow = 0;
+  composer.addPass(outlinePass);
+  composer.addPass(new OutputPass()); // tone mapping + sRGB ให้เหมือนตอน render ตรงด้วย renderer
 
   function setHover(entry) {
     if (hovered === entry) return;
-    // ไม่ขยายจอ OLED ตอน hover เพราะเป็นระนาบแบนขนาดใหญ่ ขยายแล้วลอยเด่นเกินจริง
-    // คูณจาก baseScale เดิมเสมอ (ไม่ใช่ setScalar ค่าตายตัว) เพื่อไม่ให้ไปทับขนาดที่ตั้งไว้ใน Blender
-    if (hovered && hovered.visualMesh.name !== "OLED_Screen") hovered.visualMesh.scale.copy(hovered.baseScale);
     hovered = entry;
-    if (hovered && hovered.visualMesh.name !== "OLED_Screen") hovered.visualMesh.scale.copy(hovered.baseScale).multiplyScalar(HOVER_SCALE);
+    outlinePass.selectedObjects = hovered ? [hovered.visualMesh] : [];
     canvas.style.cursor = hovered ? "pointer" : "";
     renderOnce();
   }
@@ -552,6 +752,8 @@ export function initBoard3D(canvas, hooks) {
   function resize() {
     const w = canvas.clientWidth || 1, h = canvas.clientHeight || 1;
     renderer.setSize(w, h, false);
+    composer.setPixelRatio(renderer.getPixelRatio());
+    composer.setSize(w, h);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderOnce();
@@ -562,12 +764,30 @@ export function initBoard3D(canvas, hooks) {
   /* ---------------- render loop ---------------- */
   let running = false;
   let rafId = null;
-  function renderOnce() { renderer.render(scene, camera); }
+  function renderOnce() { composer.render(); }
   function loop() {
     if (!running) return;
     controls.update();
     renderOnce();
+    emitLabels();
     rafId = requestAnimationFrame(loop);
+  }
+
+  // ส่งตำแหน่งบนจอ (px ภายใน canvas) ของแต่ละชิ้นให้ index.html วางป้ายชื่อตามมุมกล้องปัจจุบัน
+  // visible=false เมื่อชิ้นอยู่นอกกรอบภาพหรือหลังกล้อง (เช่นตอนซูมเข้าใกล้มาก)
+  const labelPos = new THREE.Vector3();
+  function emitLabels() {
+    if (!onLabels || !pickables.length) return;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    onLabels(pickables.map((p) => {
+      labelPos.copy(p.anchor).project(camera);
+      return {
+        index: p.index,
+        x: ((labelPos.x + 1) / 2) * w,
+        y: ((1 - labelPos.y) / 2) * h,
+        visible: labelPos.z < 1 && Math.abs(labelPos.x) <= 1 && Math.abs(labelPos.y) <= 1,
+      };
+    }));
   }
 
   function show() {
@@ -587,6 +807,17 @@ export function initBoard3D(canvas, hooks) {
     mesh.material.emissive.set(on ? hex : 0x000000);
   }
 
+  // กดปุ่ม = ยุบเฉพาะฝา (<ชื่อ>_Cap) ลงจากตำแหน่งเดิมในโมเดล — ตัวเรือน/แผ่นโลหะ/ขาอยู่กับที่เหมือนสวิตช์จริง
+  // (primitive สำรองไม่มี _Cap ก็ยุบทั้งชิ้นแทน) จำตำแหน่งตั้งต้นไว้ แทนการเซ็ตความสูงตายตัวที่ไม่ตรงกับโมเดล
+  const BUTTON_TRAVEL = 0.0006;
+  function pressButton(name, pressed) {
+    const node = byName.get(name);
+    if (!node) return;
+    const cap = node.getObjectByName(name + "_Cap") || node;
+    if (cap.userData.restY === undefined) cap.userData.restY = cap.position.y;
+    cap.position.y = cap.userData.restY - (pressed ? BUTTON_TRAVEL : 0);
+  }
+
   function update(s) {
     if (!s) return;
 
@@ -594,11 +825,15 @@ export function initBoard3D(canvas, hooks) {
     if (rgb && rgb.material) {
       const m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(s.rgbCss);
       if (m) {
+        // ค่าจาก rgbCss เป็น sRGB (0–255 แบบ CSS) — ต้องบอก three ว่าเป็น SRGBColorSpace ไม่งั้นจะถูกตีความเป็น
+        // linear แล้วสีผสม/PWM จะสว่างและซีดกว่าที่โค้ดสั่ง
         const r = +m[1] / 255, g = +m[2] / 255, b = +m[3] / 255;
-        rgb.material.color.setRGB(r, g, b);
+        // สีตัวเลนส์ (diffuse) ลดลงเหลือ 25% ให้แสงที่ LED เปล่งเอง (emissive) เป็นหลัก — ถ้า diffuse เต็มด้วย
+        // แสงฉากจะบวกเพิ่มจนเกินช่วงแล้ว tone mapping บีบเข้าหาสีขาว สีจะซีดแบบพาสเทล
+        rgb.material.color.setRGB(r * 0.25, g * 0.25, b * 0.25, THREE.SRGBColorSpace);
         if (rgb.material.emissive) {
-          rgb.material.emissive.setRGB(r, g, b);
-          rgb.material.emissiveIntensity = r + g + b > 0 ? 1.4 : 0;
+          rgb.material.emissive.setRGB(r, g, b, THREE.SRGBColorSpace);
+          rgb.material.emissiveIntensity = r + g + b > 0 ? 1.0 : 0;
         }
       }
     }
@@ -611,8 +846,8 @@ export function initBoard3D(canvas, hooks) {
 
     // ปุ่ม A/B ใน 3D เป็นการ "สะท้อนสถานะ" (reflect) เท่านั้น ไม่ใช่ input จริง —
     // อินพุตจริงยังคงมาจากคีย์ลัด A/B หรือปุ่ม 2D เดิม (#hwA/#hwB) ผ่าน SPUSim.setBtn()
-    const btnA = byName.get("BTN_A"); if (btnA) btnA.position.y = s.btnA ? 0.002 : 0.003;
-    const btnB = byName.get("BTN_B"); if (btnB) btnB.position.y = s.btnB ? 0.002 : 0.003;
+    pressButton("BTN_A", s.btnA);
+    pressButton("BTN_B", s.btnB);
 
     const pot = byName.get("POT_VR");
     if (pot) pot.rotation.y = (s.adc / 4095) * Math.PI * 1.5;
@@ -634,8 +869,10 @@ export function initBoard3D(canvas, hooks) {
     resizeObserver.disconnect();
     canvas.removeEventListener("pointermove", onPointerMove);
     canvas.removeEventListener("click", onClick);
+    composer.dispose();
     renderer.dispose();
   }
 
-  return { show, hide, update, resetView, dispose };
+  setTheme("light");
+  return { show, hide, update, resetView, setTheme, dispose };
 }

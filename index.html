@@ -11,8 +11,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
   }
 }
 </script>
@@ -207,38 +207,47 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .board{ position:absolute; left:0; top:0; width:560px; height:500px; transform-origin:0 0; font-family:"JetBrains Mono",monospace; }
 .board .pcb{ position:absolute; inset:0; filter:drop-shadow(0 26px 30px rgba(20,60,140,.35)); }
 .lbl{ position:absolute; font-size:9.5px; color:#cfe2ff; letter-spacing:.3px; white-space:nowrap; opacity:.92; }
-.hole{ position:absolute; width:18px; height:18px; border-radius:50%; background:#0a1a33; border:3.5px solid #e9eef5; box-shadow:0 0 0 1px rgba(0,0,0,.2); }
-.module{ position:absolute; left:196px; top:16px; width:170px; height:100px; border-radius:4px; background:linear-gradient(180deg,#f4f6f9,#cdd4dc); border:1px solid #98a2ad; box-shadow:0 4px 10px rgba(0,0,0,.25); }
-.module .shield{ position:absolute; inset:14px 12px 22px; border-radius:2px; background:linear-gradient(160deg,#fbfcfd,#d7dde4 60%,#c3cbd4); border:1px solid #a9b2bc; }
-.module .name{ position:absolute; bottom:5px; left:0; right:0; text-align:center; font-size:8.5px; color:#3e4955; letter-spacing:.4px; }
-.sht{ position:absolute; left:340px; top:12px; width:30px; height:20px; border-radius:3px; background:#fff; border:1px solid #b4bec9; box-shadow:0 2px 4px rgba(0,0,0,.2); }
-.rst{ position:absolute; left:386px; top:56px; width:30px; height:30px; border-radius:50%; border:3px solid #0d2140; background:radial-gradient(circle at 35% 30%,#56616d,#1a2129 70%); color:#cbd6e2; font-size:7.5px; display:grid; place-items:center; padding:0; box-shadow:0 3px 6px rgba(0,0,0,.35); }
-.rst:active{ transform:translateY(2px); }
-.rgb{ position:absolute; left:142px; top:84px; width:24px; height:24px; border-radius:4px; background:#0b1420; border:2px solid #31445c; }
-.rgb > div{ position:absolute; inset:3px; border-radius:2px; transition:background .05s; }
-.header-pins{ position:absolute; left:66px; top:196px; width:26px; height:150px; background:#121518; border:1px solid #000; border-radius:3px; transform:rotate(-30deg); display:flex; flex-direction:column; justify-content:space-evenly; align-items:center; padding:4px 0; box-shadow:0 4px 8px rgba(0,0,0,.35); }
-.header-pins i{ width:14px; height:5px; background:linear-gradient(180deg,#f5d24a,#c79a1c); border-radius:1px; display:block; }
-.oled{ position:absolute; left:135px; top:146px; width:290px; height:190px; border-radius:6px; background:linear-gradient(180deg,#2a6ad0,#174a9e); border:1px solid #0c3170; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px rgba(0,0,0,.25), inset 0 0 10px rgba(0,0,0,.35); }
-.oled .pins{ position:absolute; top:8px; left:50%; transform:translateX(-50%); display:flex; gap:8px; }
-.oled .pins i{ width:9px; height:9px; border-radius:50%; background:#f2c94c; display:block; box-shadow:inset 0 -1px 0 rgba(0,0,0,.3); }
-.oled .glass-scr{ width:266px; height:140px; margin-top:14px; border-radius:4px; background:#05080d; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:inset 0 0 14px rgba(80,180,255,.18); border:1px solid #000; }
-.oled canvas{ width:256px; height:128px; image-rendering:auto; background:#06090f; }
-.hwbtn{ position:absolute; top:226px; width:48px; height:48px; border-radius:50%; border:3px solid #0d2140; color:#e8eef6; font-size:12px; font-weight:700; display:grid; place-items:center; padding:0; user-select:none; touch-action:none; z-index:5; transition:transform .05s; }
-.hwbtn.up{ background:radial-gradient(circle at 35% 30%,#9aa6b4,#4b5664 70%); box-shadow:0 4px 0 #0b1b33,0 8px 14px rgba(0,0,0,.4); }
-.hwbtn.down{ background:radial-gradient(circle at 35% 30%,#b6c2cf,#5b6774 70%); transform:translateY(3px); box-shadow:0 1px 0 #0b1b33; }
-.relay{ position:absolute; top:344px; width:96px; height:76px; border-radius:4px; background:linear-gradient(180deg,#2c333b,#14181d); border:1px solid #05070a; padding:7px 8px; font-size:8.5px; color:#b4c2d0; box-shadow:0 5px 10px rgba(0,0,0,.35); }
-.relay .st{ position:absolute; left:8px; bottom:7px; font-size:10.5px; font-weight:700; color:#e3eaf2; }
-.relay .led{ position:absolute; right:8px; bottom:9px; width:10px; height:10px; border-radius:50%; background:#4a1515; transition:all .08s; }
-.relay .led.on{ background:#ff3b30; box-shadow:0 0 12px 3px rgba(255,59,48,.8); }
+/* ---- 2D board: positions/shapes follow the 3D model top view (1px = 0.25mm, origin top-left) ---- */
+.module{ position:absolute; left:213px; top:66px; width:136px; height:80px; border-radius:3px; background:linear-gradient(180deg,#f4f0e6,#d8d0bb); border:1px solid #a49b84; box-shadow:0 4px 10px rgba(0,0,0,.35); }
+.module .shield{ position:absolute; left:27px; top:6px; width:80px; height:64px; border-radius:2px; background:linear-gradient(160deg,#fbfcfd,#d7dde4 60%,#c3cbd4); border:1px solid #a9b2bc; }
+.module .name{ position:absolute; left:0; right:0; top:25px; text-align:center; font-size:7px; line-height:1.3; color:#3e4955; letter-spacing:.3px; }
+.sht{ position:absolute; left:346px; top:33px; width:28px; height:20px; border-radius:2px; background:#f2f1ec; border:1px solid #b4bec9; box-shadow:0 2px 4px rgba(0,0,0,.25); }
+.rst{ position:absolute; left:380px; top:64px; width:24px; height:24px; border:0; border-radius:2px; padding:0; background:#15181c; box-shadow:0 3px 6px rgba(0,0,0,.4); }
+.rst::before{ content:""; position:absolute; inset:3px; border-radius:1px; background:linear-gradient(135deg,#eef1f4,#9aa3ad); }
+.rst::after{ content:""; position:absolute; left:50%; top:50%; width:13.6px; height:13.6px; margin:-6.8px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#3a4048,#0c0e11 70%); transition:transform .05s; }
+.rst:active::after{ transform:scale(.88); }
+.rgb{ position:absolute; left:182px; top:33px; width:25px; height:25px; border-radius:3px; background:#e9ebee; border:1px solid #9aa3ad; box-shadow:0 2px 4px rgba(0,0,0,.3); }
+.rgb > div{ position:absolute; inset:4px; border-radius:50%; transition:background .05s; }
+.header-pins{ position:absolute; left:91.5px; top:52.9px; width:33.6px; height:173.6px; background:#121518; border:1px solid #000; border-radius:2px; transform:rotate(29.3deg); display:grid; grid-template-columns:12.2px 12.2px; grid-auto-rows:12.2px; justify-content:center; align-content:center; box-shadow:0 4px 8px rgba(0,0,0,.35); }
+.header-pins i{ width:4.5px; height:4.5px; place-self:center; background:linear-gradient(135deg,#f4f6f8,#8d96a0); border-radius:.5px; display:block; }
+.oled{ position:absolute; left:156px; top:161.6px; width:248px; height:168px; border-radius:3px; background:#19194c; border:1px solid #07082a; box-shadow:0 6px 14px rgba(0,0,0,.3); }
+.oled .oh{ position:absolute; width:8.4px; height:8.4px; margin:-4.2px; border-radius:50%; background:radial-gradient(circle,#19194c 0 1.6px,#e8c54a 1.8px); }
+.oled .glass-scr{ position:absolute; left:8px; top:8px; width:232px; height:152px; border-radius:1px; background:#05080d; display:flex; align-items:center; justify-content:center; overflow:hidden; box-shadow:inset 0 0 14px rgba(80,180,255,.12); }
+.oled canvas{ width:232px; height:116px; image-rendering:auto; background:#06090f; }
+.hwbtn{ position:absolute; width:36px; height:36px; border:0; border-radius:2px; padding:0; background:#15181c; color:#e8eef6; font:700 11px/1 "Inter",sans-serif; user-select:none; touch-action:none; z-index:5; box-shadow:0 3px 6px rgba(0,0,0,.4); }
+.hwbtn::before{ content:""; position:absolute; inset:4.25px; border-radius:1px; background:linear-gradient(135deg,#eef1f4,#9aa3ad); }
+.hwbtn .cap{ position:absolute; left:50%; top:50%; width:28.8px; height:28.8px; margin:-14.4px; border-radius:50%; display:grid; place-items:center; background:radial-gradient(circle at 40% 35%,#3a4048,#0c0e11 72%); box-shadow:0 2px 3px rgba(0,0,0,.5); transition:transform .05s; }
+.hwbtn.down .cap{ transform:scale(.9); background:radial-gradient(circle at 40% 35%,#2a2f35,#08090b 72%); box-shadow:0 0 1px rgba(0,0,0,.6); }
+#hwA{ left:106px; top:230.2px; }
+#hwB{ left:418.9px; top:228.9px; }
+.relay{ position:absolute; height:26px; border-radius:3px; background:linear-gradient(180deg,#2c333b,#14181d); border:1px solid #05070a; display:flex; align-items:center; gap:6px; padding:0 8px; font-size:7.5px; color:#b4c2d0; white-space:nowrap; box-shadow:0 5px 10px rgba(0,0,0,.35); transition:box-shadow .08s; }
+.relay .st{ margin-left:auto; font-size:9px; font-weight:700; color:#e3eaf2; }
+.relay .led{ width:8px; height:8px; border-radius:50%; background:#4a1515; transition:all .08s; }
+.relay .led.on{ background:#ff3b30; box-shadow:0 0 10px 2px rgba(255,59,48,.8); }
+.relay.on{ box-shadow:0 0 0 1px #16a34a,0 0 14px rgba(22,163,74,.55); }
 .relay.on .st{ color:#7ee2a1; }
-.pot{ position:absolute; left:128px; top:408px; width:44px; height:52px; border-radius:6px; background:linear-gradient(180deg,#3b82f6,#1d4fb8); border:2px solid #0d2a5a; cursor:grab; touch-action:none; box-shadow:0 4px 8px rgba(0,0,0,.35); }
+#relay1{ left:399px; top:116.9px; width:116px; transform:rotate(60.2deg); }
+#relay2{ left:397.4px; top:331.1px; width:141.5px; height:28px; transform:rotate(-59.3deg); }
+.pot{ position:absolute; left:163.4px; top:432.2px; width:51.5px; height:44px; border-radius:4px; background:linear-gradient(180deg,#5a82b8,#46699c); border:1px solid #2a4a7a; cursor:grab; touch-action:none; box-shadow:0 4px 8px rgba(0,0,0,.35); }
 .pot:active{ cursor:grabbing; }
-.pot .knob{ position:absolute; left:50%; top:50%; width:26px; height:26px; border-radius:50%; transform:translate(-50%,-50%); background:radial-gradient(circle at 40% 35%,#fff,#d7e2f0); box-shadow:0 1px 3px rgba(0,0,0,.4); }
-.pot .knob i{ position:absolute; left:50%; top:50%; width:4px; height:11px; margin-left:-2px; margin-top:-11px; border-radius:2px; background:#1d4fb8; transform-origin:50% 100%; display:block; }
-.buzzer{ position:absolute; left:368px; top:404px; width:56px; height:56px; border-radius:50%; background:radial-gradient(circle at 40% 35%,#2c333a,#090c10); border:2px solid #04060a; transition:box-shadow .08s; }
-.buzzer::after{ content:""; position:absolute; left:50%; top:50%; width:9px; height:9px; margin:-4.5px; border-radius:50%; background:#000; }
+.pot .knob{ position:absolute; left:50%; top:50%; width:27.8px; height:27.8px; border-radius:50%; transform:translate(-50%,-50%); background:radial-gradient(circle at 40% 35%,#4a55d0,#232c8c 75%); box-shadow:0 1px 3px rgba(0,0,0,.45); }
+.pot .knob i{ position:absolute; left:50%; top:50%; width:3px; height:11px; margin-left:-1.5px; margin-top:-11px; border-radius:2px; background:#e8eef6; transform-origin:50% 100%; display:block; }
+.buzzer{ position:absolute; left:340.1px; top:410.8px; width:63.2px; height:63.2px; border-radius:50%; transition:box-shadow .08s;
+  background:radial-gradient(circle,#000 0 4.4px,#2b3036 4.8px 13.6px,#1a1d22 14px 16.8px,#2b3036 17.2px 28px,#1f2328 31.6px);
+  box-shadow:0 4px 8px rgba(0,0,0,.4), inset 0 0 0 1px #0b0d10; }
+.buzzer::after{ content:"+"; position:absolute; left:46px; top:50%; transform:translateY(-52%); font:700 9px/1 "Inter",sans-serif; color:#454b54; }
 .buzzer.on{ box-shadow:0 0 0 7px rgba(245,158,11,.25),0 0 26px rgba(245,158,11,.65); }
-.usb{ position:absolute; left:250px; top:454px; width:60px; height:26px; border-radius:5px; background:linear-gradient(180deg,#fdfdfe,#ccd3db); border:1px solid #8f99a4; box-shadow:0 3px 6px rgba(0,0,0,.25); }
+.usb{ position:absolute; left:248px; top:453px; width:64px; height:28px; border-radius:3px; background:linear-gradient(180deg,#fdfdfe,#c4ccd5); border:1px solid #8f99a4; box-shadow:0 3px 6px rgba(0,0,0,.25); }
 
 /* part labels (overlay is unscaled so text stays readable) */
 .seg button.on{ background:var(--blue); color:#fff; box-shadow:var(--shadow-btn); }
@@ -524,50 +533,82 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
               <div class="board" id="board">
                 <svg class="pcb" viewBox="0 0 560 500" aria-hidden="true">
                   <defs>
-                    <linearGradient id="pcbG" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0" stop-color="#3a86e8"/><stop offset=".5" stop-color="#1d5fc4"/><stop offset="1" stop-color="#174ea8"/>
-                    </linearGradient>
-                    <linearGradient id="pcbEdge" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stop-color="#7fb5ff"/><stop offset="1" stop-color="#0f3c88"/>
-                    </linearGradient>
+                    <clipPath id="pcbHex"><polygon points="148,16 412,16 543.2,250 412,484 148,484 16.8,250"/></clipPath>
                   </defs>
-                  <polygon points="148,16 412,16 543,250 412,484 148,484 17,250" fill="url(#pcbEdge)" stroke="url(#pcbEdge)" stroke-width="28" stroke-linejoin="round"/>
-                  <polygon points="150,22 410,22 536,250 410,478 150,478 24,250" fill="url(#pcbG)" stroke="url(#pcbG)" stroke-width="22" stroke-linejoin="round"/>
-                  <g stroke="#6fa8f5" stroke-opacity=".28" stroke-width="2" fill="none">
-                    <path d="M110 250h30M420 250h30M200 130v-10M360 130v-10M280 340v-6M90 160l40 40M470 160l-40 40M100 340l40-20M460 340l-40-20"/>
-                    <path d="M185 470v-20h40M375 470v-20h-40"/>
+                  <!-- ลาย PCB เดียวกับโมเดล 3D (export จาก PCB_Paint ใน board-source.blend, UV = กรอบ x17–543 y16–484) -->
+                  <polygon points="148,16 412,16 543.2,250 412,484 148,484 16.8,250" fill="#0b1f42"/>
+                  <image href="assets/textures/pcb-top.png" x="17" y="16" width="526" height="468" preserveAspectRatio="none" clip-path="url(#pcbHex)"/>
+                  <polygon points="148,16 412,16 543.2,250 412,484 148,484 16.8,250" fill="none" stroke="#06142b" stroke-width="2"/>
+                  <!-- ชิ้นส่วนเตี้ย/ไม่มี interaction: วาดตาม hull มุมมองบนของโมเดล 3D -->
+                  <polyline points="268.2,25.1 293.8,32.7 268.2,40.3 293.8,47.9 268.2,55.5 293.8,63.1 281,66.3" fill="none" stroke="#d6b45c" stroke-width="2.6" stroke-linejoin="round"/>
+                  <g stroke="#d6b45c" stroke-width="3.2" stroke-dasharray="2.4 2.6">
+                    <path d="M212 78V146M350 78V146M216 147H346"/>
+                  </g>
+                  <g fill="#c9d0d8">
+                    <rect x="350.8" y="21.9" width="2.2" height="11"/><rect x="356.2" y="21.9" width="2.2" height="11"/><rect x="361.7" y="21.9" width="2.2" height="11"/><rect x="367.2" y="21.9" width="2.2" height="11"/>
+                    <rect x="350.8" y="52.5" width="2.2" height="11"/><rect x="356.2" y="52.5" width="2.2" height="11"/><rect x="361.7" y="52.5" width="2.2" height="11"/><rect x="367.2" y="52.5" width="2.2" height="11"/>
+                    <!-- ขาสวิตช์ BTN_A / BTN_B / RST -->
+                    <rect x="99.2" y="234.9" width="4.8" height="3.2"/><rect x="99.2" y="258.2" width="4.8" height="3.2"/><rect x="141.6" y="234.9" width="4.8" height="3.2"/><rect x="141.6" y="258.2" width="4.8" height="3.2"/>
+                    <rect x="412.1" y="233.6" width="4.8" height="3.2"/><rect x="412.1" y="256.9" width="4.8" height="3.2"/><rect x="454.5" y="233.6" width="4.8" height="3.2"/><rect x="454.5" y="256.9" width="4.8" height="3.2"/>
+                    <rect x="375.2" y="67.2" width="4.8" height="2.2"/><rect x="375.2" y="82.6" width="4.8" height="2.2"/><rect x="404" y="67.2" width="4.8" height="2.2"/><rect x="404" y="82.6" width="4.8" height="2.2"/>
+                    <rect x="237.6" y="457.4" width="84.8" height="19.2" rx="1.5" fill="#aeb6bf"/>
+                  </g>
+                  <!-- ขั้วต่อสายรีเลย์ (screw terminal) -->
+                  <g fill="#111317">
+                    <polygon points="478.2,186.9 495.5,177 513.4,208.3 496.1,218.2"/>
+                    <polygon points="496.7,277.5 515.1,246.5 532.3,256.7 513.9,287.7"/>
+                  </g>
+                  <g fill="#c9d0d8" stroke="#6f7882" stroke-width=".8">
+                    <circle cx="491" cy="189.2" r="4.4"/><circle cx="500.6" cy="206" r="4.4"/>
+                    <circle cx="519.4" cy="258.8" r="4.4"/><circle cx="509.6" cy="275.4" r="4.4"/>
+                  </g>
+                  <g stroke="#59626c" stroke-width="1.1">
+                    <path d="M488 191.5l6-4.6M497.6 208.3l6-4.6M516.4 256.5l6 4.6M506.6 273.1l6 4.6"/>
+                  </g>
+                  <!-- ขั้วต่อ I2C / UART2 (JST สีขาว) -->
+                  <g transform="translate(74.65 306.35) rotate(59.4)">
+                    <rect x="-28.5" y="-13.85" width="57" height="27.7" rx="2" fill="#efefe8" stroke="#b9b9ae"/>
+                    <rect x="-24" y="-5" width="48" height="12" rx="1" fill="#2a2c30"/>
+                    <g fill="#d6b45c"><rect x="-19" y="-1.5" width="3" height="3"/><rect x="-7" y="-1.5" width="3" height="3"/><rect x="5" y="-1.5" width="3" height="3"/><rect x="17" y="-1.5" width="3" height="3"/></g>
+                  </g>
+                  <g transform="translate(110.15 367.05) rotate(60.7)">
+                    <rect x="-28" y="-13.6" width="56" height="27.2" rx="2" fill="#efefe8" stroke="#b9b9ae"/>
+                    <rect x="-23.5" y="-5" width="47" height="12" rx="1" fill="#2a2c30"/>
+                    <g fill="#d6b45c"><rect x="-18.5" y="-1.5" width="3" height="3"/><rect x="-6.5" y="-1.5" width="3" height="3"/><rect x="5.5" y="-1.5" width="3" height="3"/><rect x="17.5" y="-1.5" width="3" height="3"/></g>
+                  </g>
+                  <!-- DIP switch -->
+                  <rect x="317.1" y="391.7" width="36" height="17.2" rx="1.5" fill="#16191d"/>
+                  <g fill="#ecebe6">
+                    <rect x="321.9" y="391.7" width="4.8" height="9.6"/><rect x="329.1" y="399.3" width="4.8" height="9.6"/><rect x="336.3" y="391.7" width="4.8" height="9.6"/><rect x="343.5" y="391.7" width="4.8" height="9.6"/>
                   </g>
                 </svg>
-                <div class="hole" style="left:118px;top:58px"></div>
-                <div class="hole" style="left:424px;top:58px"></div>
-                <div class="hole" style="left:84px;top:424px"></div>
-                <div class="hole" style="left:458px;top:424px"></div>
 
-                <div class="module"><div class="shield"></div><div class="name">ESP32-D0WDQ6</div></div>
+                <div class="module"><div class="shield"><div class="name">ESPRESSIF<br>ESP32-WROOM-32</div></div></div>
                 <div class="sht" title="SHT31"></div>
-                <div class="lbl" style="left:374px;top:18px">SHT31</div>
-                <button class="rst" id="hwRst" title="RST">RST</button>
+                <div class="lbl" style="left:303px;top:19px">SHT31</div>
+                <button class="rst" id="hwRst" title="RST"></button>
 
                 <div class="rgb"><div id="rgbLed"></div></div>
-                <div class="lbl" style="left:108px;top:112px">RGB 25/26/27</div>
+                <div class="lbl" style="left:172px;top:19px">RGB 25/26/27</div>
 
-                <div class="header-pins"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="header-pins"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
                 <div class="oled">
-                  <div class="pins"><i></i><i></i><i></i><i></i></div>
+                  <span class="oh" style="left:6.9px;top:7.2px"></span><span class="oh" style="left:6.9px;top:160.8px"></span>
+                  <span class="oh" style="left:242.2px;top:7.2px"></span><span class="oh" style="left:241.1px;top:160.8px"></span>
                   <div class="glass-scr"><canvas id="oled" width="512" height="256"></canvas></div>
                 </div>
 
-                <button class="hwbtn up" id="hwA" style="left:86px">A</button>
-                <button class="hwbtn up" id="hwB" style="right:86px">B</button>
+                <button class="hwbtn up" id="hwA"><span class="cap">A</span></button>
+                <button class="hwbtn up" id="hwB"><span class="cap">B</span></button>
 
-                <div class="relay" id="relay1" style="left:182px">K1 · RELAY 1<div class="st">OFF</div><div class="led"></div></div>
-                <div class="relay" id="relay2" style="left:284px">K2 · RELAY 2<div class="st">OFF</div><div class="led"></div></div>
+                <div class="relay" id="relay1">K1 · RELAY 1<div class="st">OFF</div><div class="led"></div></div>
+                <div class="relay" id="relay2">K2 · RELAY 2<div class="st">OFF</div><div class="led"></div></div>
 
                 <div class="pot" id="pot" title="ลากเพื่อหมุน VR"><div class="knob"><i id="knob"></i></div></div>
-                <div class="lbl" style="left:110px;top:463px">VR 10K · A36</div>
+                <div class="lbl" style="left:160px;top:419px">VR 10K · A36</div>
                 <div class="buzzer" id="buzzer" title="Buzzer 33"></div>
-                <div class="lbl" style="left:370px;top:463px">Buzzer-33</div>
+                <div class="lbl" style="left:358px;top:397px">Buzzer-33</div>
                 <div class="usb"></div>
               </div>
               <div class="tags" id="tags"></div>
@@ -996,18 +1037,18 @@ function measureBoard(){
 
 /* part labels: x/y = dot position in board coords (560x500), side = which way the name extends */
 const PARTS = [
-  { x:262, y:92,  side:"r", name:"ESP32 Module", pin:"ESP32-D0WDQ6", desc:"สมองของบอร์ด — ชิป ESP32 dual-core 240MHz พร้อม WiFi/Bluetooth ในตัว โค้ดที่กด Run จะทำงานบนชิปนี้" },
-  { x:355, y:22,  side:"r", name:"SHT31", pin:"I2C 0x44", desc:"เซนเซอร์วัดอุณหภูมิและความชื้น อ่านค่าด้วย <code>sht31.readTemperature()</code> / <code>readHumidity()</code> — ปรับค่าได้ที่แผง Sensors" },
-  { x:401, y:71,  side:"r", name:"Reset (RST)", pin:"EN", desc:"ปุ่มรีเซ็ตบอร์ด กดแล้วโปรแกรมจะเริ่มทำงานจาก <code>setup()</code> ใหม่" },
-  { x:154, y:96,  side:"l", name:"RGB LED", pin:"GPIO 25/26/27", desc:"LED 3 สีแบบ Common Anode — สั่ง <code>LOW</code> = ติด, <code>HIGH</code> = ดับ ใช้ PWM ผสมสีได้" },
-  { x:84,  y:318, side:"l", name:"Pin Header", pin:"GPIO", desc:"ขา I/O สำหรับต่ออุปกรณ์ภายนอกเพิ่มเติม" },
-  { x:280, y:200, side:"r", name:"OLED Display", pin:"I2C 0x3C", desc:"จอ OLED 128×64 (SSD1306) ใช้ไลบรารี Adafruit_SSD1306 — อย่าลืม <code>display.display()</code> หลังวาด" },
-  { x:110, y:250, side:"l", name:"Button A", pin:"GPIO 0", desc:"ปุ่มกด A — กดแล้วอ่านค่าได้ <code>LOW</code> ด้วย <code>digitalRead(0)</code> (คีย์ลัด A)" },
-  { x:450, y:250, side:"r", name:"Button B", pin:"GPIO 4", desc:"ปุ่มกด B — กดแล้วอ่านค่าได้ <code>LOW</code> ด้วย <code>digitalRead(4)</code> (คีย์ลัด B)" },
-  { x:230, y:372, side:"l", name:"Relay 1", pin:"GPIO 32", desc:"รีเลย์ K1 แบบ Active LOW — <code>digitalWrite(32, LOW)</code> = ON" },
-  { x:332, y:372, side:"r", name:"Relay 2", pin:"GPIO 14", desc:"รีเลย์ K2 แบบ Active LOW — <code>digitalWrite(14, LOW)</code> = ON" },
-  { x:150, y:434, side:"l", name:"VR 10K", pin:"A36", desc:"ตัวต้านทานปรับค่าได้ อ่านค่า 0–4095 ด้วย <code>analogRead(36)</code> — ลากหมุนบนบอร์ดหรือใช้สไลเดอร์" },
-  { x:396, y:432, side:"r", name:"Buzzer", pin:"GPIO 33", desc:"ลำโพง Buzzer มีเสียงจริง ใช้ <code>tone()</code> หรือ <code>ledcWriteTone()</code>" },
+  { x:281, y:106, side:"r", name:"ESP32 Module", pin:"ESP32-D0WDQ6", desc:"สมองของบอร์ด — ชิป ESP32 dual-core 240MHz พร้อม WiFi/Bluetooth ในตัว โค้ดที่กด Run จะทำงานบนชิปนี้" },
+  { x:360, y:43, side:"r", name:"SHT31", pin:"I2C 0x44", desc:"เซนเซอร์วัดอุณหภูมิและความชื้น อ่านค่าด้วย <code>sht31.readTemperature()</code> / <code>readHumidity()</code> — ปรับค่าได้ที่แผง Sensors" },
+  { x:392, y:76, side:"r", name:"Reset (RST)", pin:"EN", desc:"ปุ่มรีเซ็ตบอร์ด กดแล้วโปรแกรมจะเริ่มทำงานจาก <code>setup()</code> ใหม่" },
+  { x:195, y:45, side:"l", name:"RGB LED", pin:"GPIO 25/26/27", desc:"LED 3 สีแบบ Common Anode — สั่ง <code>LOW</code> = ติด, <code>HIGH</code> = ดับ ใช้ PWM ผสมสีได้" },
+  { x:108, y:140, side:"l", name:"Pin Header", pin:"GPIO", desc:"ขา I/O สำหรับต่ออุปกรณ์ภายนอกเพิ่มเติม" },
+  { x:280, y:246, side:"r", name:"OLED Display", pin:"I2C 0x3C", desc:"จอ OLED 128×64 (SSD1306) ใช้ไลบรารี Adafruit_SSD1306 — อย่าลืม <code>display.display()</code> หลังวาด" },
+  { x:124, y:248, side:"l", name:"Button A", pin:"GPIO 0", desc:"ปุ่มกด A — กดแล้วอ่านค่าได้ <code>LOW</code> ด้วย <code>digitalRead(0)</code> (คีย์ลัด A)" },
+  { x:437, y:247, side:"r", name:"Button B", pin:"GPIO 4", desc:"ปุ่มกด B — กดแล้วอ่านค่าได้ <code>LOW</code> ด้วย <code>digitalRead(4)</code> (คีย์ลัด B)" },
+  { x:457, y:130, side:"r", name:"Relay 1", pin:"GPIO 32", desc:"รีเลย์ K1 แบบ Active LOW — <code>digitalWrite(32, LOW)</code> = ON" },
+  { x:468, y:345, side:"r", name:"Relay 2", pin:"GPIO 14", desc:"รีเลย์ K2 แบบ Active LOW — <code>digitalWrite(14, LOW)</code> = ON" },
+  { x:190, y:454, side:"l", name:"VR 10K", pin:"A36", desc:"ตัวต้านทานปรับค่าได้ อ่านค่า 0–4095 ด้วย <code>analogRead(36)</code> — ลากหมุนบนบอร์ดหรือใช้สไลเดอร์" },
+  { x:372, y:442, side:"r", name:"Buzzer", pin:"GPIO 33", desc:"ลำโพง Buzzer มีเสียงจริง ใช้ <code>tone()</code> หรือ <code>ledcWriteTone()</code>" },
   { x:280, y:467, side:"r", name:"USB Port", pin:"UART0", desc:"พอร์ต USB สำหรับอัปโหลดโค้ดและสื่อสาร Serial (ดูผลที่ Serial Monitor)" }
 ];
 window.PARTS = PARTS; // ให้ board3d.js (ES module แยกไฟล์) อ่านตำแหน่ง/ชื่อชิ้นส่วนชุดเดียวกับ 2D
@@ -1038,6 +1079,22 @@ function setTags(on){
   if(!on) hidePart();
   store.set("tags", on ? "1" : "0");
 }
+// มุมมอง 3D: board3d.js ส่งตำแหน่งชิ้นส่วนที่ project ลงจอมาทุกเฟรม — ย้ายป้ายตามโมเดล 3D แทนพิกัด 2D
+// และเลือกฝั่งชื่อตามว่าจุดอยู่ซีกซ้าย/ขวาของภาพ ป้ายจะได้ไม่ล้นออกนอกกรอบ
+window.placeTags3D = (pts) => {
+  const half = tagBox.clientWidth / 2;
+  pts.forEach(p => {
+    const el = tagEls[p.index];
+    if(!el) return;
+    el.style.display = p.visible ? "" : "none";
+    el.style.left = p.x + "px"; el.style.top = p.y + "px";
+    el.classList.toggle("l", p.x < half);
+  });
+};
+window.restoreTags2D = () => {
+  tagEls.forEach((el, i) => { el.style.display = ""; el.classList.toggle("l", PARTS[i].side === "l"); });
+  measureBoard();
+};
 $("btnTags").onclick = () => setTags(!tagBox.classList.contains("show"));
 setTags(store.get("tags") === "1");
 $("btnZoom").onclick = () => {
@@ -1161,11 +1218,17 @@ import { initBoard3D } from "./board3d.js";
       board3d = initBoard3D(canvas, {
         getParts: () => window.PARTS || [],
         onSelect: (i) => { if(window.showPart) window.showPart(i); },
-        getOledCanvas: () => document.getElementById("oled")
+        getOledCanvas: () => document.getElementById("oled"),
+        onLabels: (pts) => { if(visible && window.placeTags3D) window.placeTags3D(pts); }
       });
+      syncTheme();
     }
     return board3d;
   }
+
+  // พื้นหลัง/ตารางของ 3D ตามธีมสว่าง-มืดของหน้า — ฟังการเปลี่ยน data-theme ที่ setTheme() ของสคริปต์หลักตั้งไว้
+  function syncTheme(){ if(board3d) board3d.setTheme(document.documentElement.getAttribute("data-theme")); }
+  new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   btn3d.onclick = () => {
     visible = !visible;
@@ -1179,9 +1242,17 @@ import { initBoard3D } from "./board3d.js";
       canvas.style.display = "none";
       boardEl.style.display = "";
       if(board3d) board3d.hide();
+      if(window.restoreTags2D) window.restoreTags2D();
     }
   };
   btnReset3d.onclick = () => { if(board3d) board3d.resetView(); };
+
+  // ป้ายชื่อรับ pointer event (คลิกเปิดรายละเอียดได้) จึงบัง wheel ไม่ให้ถึง canvas — ส่งต่อให้ซูมได้แม้เมาส์อยู่บนป้าย
+  document.getElementById("tags").addEventListener("wheel", (e) => {
+    if(!visible) return;
+    e.preventDefault();
+    canvas.dispatchEvent(new WheelEvent("wheel", e));
+  }, { passive: false });
 
   window.__board3dTick = (snapshot) => { if(visible && board3d) board3d.update(snapshot); };
 })();
