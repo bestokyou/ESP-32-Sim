@@ -850,7 +850,7 @@ export function initBoard3D(canvas, hooks) {
     pressButton("BTN_B", s.btnB);
 
     const pot = byName.get("POT_VR");
-    if (pot) pot.rotation.y = (s.adc / 4095) * Math.PI * 1.5;
+    if (pot) pot.rotation.y = -(s.adc / 4095) * Math.PI * 1.5;
 
     if (oledState.texture) oledState.texture.needsUpdate = true;
 
