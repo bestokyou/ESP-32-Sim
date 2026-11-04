@@ -1,5 +1,9 @@
 # ESP32 Board Simulator
 
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen?logo=github)](https://bestokyou.github.io/ESP-32-Sim/)
+
+**[Try it live →](https://bestokyou.github.io/ESP-32-Sim/)**
+
 A browser-based simulator for an ESP32 dev board. Write Arduino-style
 (`.ino`) code in the built-in editor and run it against a simulated board —
 no physical hardware or Arduino IDE required.
