@@ -1,11 +1,9 @@
-// GENERATED from dc-runtime/src/*.ts — do not edit. Rebuild with `cd dc-runtime && bun run build`.
 "use strict";
 (() => {
   var __defProp = Object.defineProperty;
   var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // src/react.ts
   function getReact() {
     const R = window.React;
     if (!R) throw new Error("dc-runtime: window.React is not available yet");
@@ -20,7 +18,6 @@
     ...args
   ));
 
-  // src/parse.ts
   function parseDcDocument(doc) {
     const dc = doc.querySelector("x-dc");
     if (!dc) return null;
@@ -82,7 +79,6 @@
     return base.replace(/\.dc\.html$/, "").replace(/\.html?$/, "") || "Root";
   }
 
-  // src/boot.ts
   var BASE_CSS = `
     .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
       border:1px solid color-mix(in srgb,currentColor 50%,transparent);
@@ -199,7 +195,6 @@
     return rootName;
   }
 
-  // src/expr.ts
   var IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*/;
   var NUMBER_RE = /^-?\d+(\.\d+)?$/;
   function resolve(vals, src) {
@@ -293,7 +288,6 @@
     return cur;
   }
 
-  // src/encode.ts
   var CAMEL_ATTR = "sc-camel-";
   var INLINE_TEXT_TAGS = new Set(
     "a abbr b bdi bdo br cite code del dfn em i ins kbd mark q s samp small span strike strong sub sup u var wbr".split(
@@ -411,7 +405,6 @@
     return () => raw;
   }
 
-  // src/compile.ts
   function collectProps(node, kind, host) {
     const propGetters = [];
     const pseudoClasses = [];
@@ -442,7 +435,7 @@
     }
     return { propGetters, pseudoClasses, hintSize };
   }
-  var HOST_STYLE_PROPS = /* @__PURE__ */ new Set([
+  var HOST_STYLE_PROPS =  new Set([
     "position",
     "left",
     "right",
@@ -466,7 +459,6 @@
   }
   function compileTemplate(html, host) {
     const tpl = document.createElement("template");
-    //! nosemgrep: direct-inner-html-assignment
     tpl.innerHTML = encodeCase(html);
     let tplN = 0;
     (function stamp(node) {
@@ -493,8 +485,8 @@
   function walkDeckChildren(el, host) {
     const pairs = [...el.childNodes].map((c) => ({ c, b: walk(c, host) })).filter((p) => p.b !== null);
     const kids = pairs.map((p) => p.b);
-    const seen = /* @__PURE__ */ new Set();
-    const wsSeen = /* @__PURE__ */ new Map();
+    const seen =  new Set();
+    const wsSeen =  new Map();
     const keys = [];
     const nextSlideId = new Array(pairs.length);
     {
@@ -559,7 +551,7 @@
     if (tag === "dc-import") return walkComponent(el, host);
     return walkElement(el, host);
   }
-  var warnedHoles = /* @__PURE__ */ new Set();
+  var warnedHoles =  new Set();
   function warnUnresolved(ctx, what) {
     const key = (ctx?.__name || "?") + "\0" + what;
     if (warnedHoles.has(key)) return;
@@ -813,12 +805,10 @@
     };
   }
 
-  // src/logic.ts
   var StreamableLogic = class {
     constructor(props) {
       __publicField(this, "props");
       __publicField(this, "state", {});
-      /** Back-pointer to the wrapper component, installed after construction. */
       __publicField(this, "__host");
       this.props = props || {};
     }
@@ -834,13 +824,11 @@
     }
     componentWillUnmount() {
     }
-    /** The flat object the template renders against (merged over props). */
     renderVals() {
       return {};
     }
   };
   function evalDcLogic(src) {
-    //! nosemgrep: eval-and-function-constructor
     const fn = new Function(
       "DCLogic",
       "StreamableLogic",
@@ -850,7 +838,6 @@
     return fn(StreamableLogic, StreamableLogic, getReact());
   }
 
-  // src/component.ts
   function shallowEqual(a, b) {
     if (!b) return false;
     const ak = Object.keys(a).filter((k) => k !== "children");
@@ -894,23 +881,11 @@
         __publicField(this, "__name");
         __publicField(this, "__sub");
         __publicField(this, "__needsDidMount", false);
-        /** Snapshot of the registry's streaming flags taken at render time —
-         *  builders read it off the RenderCtx (this) to pick placeholder vs
-         *  render-nothing for unresolved values. */
         __publicField(this, "__streamingNow", false);
         __publicField(this, "__htmlStreamingNow", false);
-        /** When a construct throws, remember the (class, registry.ver, props)
-         *  triple so render-time reconcile doesn't re-attempt it on every parent
-         *  re-render. A registry bump (new class, template, external module
-         *  resolving via bumpAll) changes `ver` and breaks the memo so an
-         *  env-dependent constructor can self-heal. */
         __publicField(this, "__failedLogic", null);
         __publicField(this, "__failedUserProps", null);
         __publicField(this, "__failedVer", -1);
-        /** Per-instance constructor error — kept here (not on the registry entry)
-         *  so one instance's successful construct can't hide a sibling's failure,
-         *  and a construct can never wipe an eval error `updateJs` recorded on
-         *  `r.logicError`. */
         __publicField(this, "__ctorError", null);
         __publicField(this, "logic");
         this.__name = props.__name;
@@ -922,9 +897,6 @@
         this.__makeLogic(registry.get(this.__name).Logic, null);
         ensureFetched(this.__name);
       }
-      /** Error-boundary hook: a render crash anywhere in this DC's subtree
-       *  (its own template, an x-import'd component, a child DC without its
-       *  own deeper boundary) lands here instead of unmounting the page. */
       static getDerivedStateFromError(e) {
         return { __err: e instanceof Error && e.message ? e.message : String(e) };
       }
@@ -935,8 +907,6 @@
           info?.componentStack || ""
         );
       }
-      /** Instantiate the logic class (or the no-op base) and adopt `prevState`
-       *  over its initial state — used both at mount and on hot-swap. */
       __makeLogic(Logic, prevState) {
         const L = Logic || StreamableLogic;
         try {
@@ -958,8 +928,6 @@
         if (prevState)
           this.logic.state = { ...this.logic.state || {}, ...prevState };
       }
-      /** The props the author's logic + template see — internal __-prefixed
-       *  wiring stripped. */
       __userProps() {
         const { __name, __hintSize, __tplId, __hostStyle, ...rest } = this.props;
         return rest;
@@ -970,9 +938,6 @@
         this.logic.state = { ...prev, ...patch };
         this.setState((s) => ({ __v: s.__v + 1 }), cb);
       }
-      /** Swap the logic instance when the registry's Logic class changed
-       *  (streaming completion, hot reload). State carries over; didMount
-       *  re-fires after the swap commits so refs exist. */
       __reconcileLogic() {
         const r = registry.get(this.__name);
         const Next = r.Logic;
@@ -1106,7 +1071,7 @@
       }
     }
     __publicField(StreamableComponent, "contextType", AncestorContext);
-    const named = /* @__PURE__ */ new Map();
+    const named =  new Map();
     function getDC(name) {
       const hit = named.get(name);
       if (hit) return hit;
@@ -1132,14 +1097,12 @@
     };
   }
 
-  // src/bundled.ts
   function bundledBlob(url) {
     const blobs = window.__resourceBlobs;
     const b = blobs ? blobs[url.split("#")[0]] : void 0;
     return b instanceof Blob ? b : null;
   }
 
-  // src/cdn.ts
   var REACT_URL = "https://unpkg.com/react@18.3.1/umd/react.production.min.js";
   var REACT_SRI = "sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z";
   var REACT_DOM_URL = "https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js";
@@ -1152,7 +1115,6 @@
     return typeof v === "string" && v ? { src: v } : { src: url, integrity: sri };
   }
 
-  // src/external.ts
   var isCustomElementName = (n) => !n.includes(".") && n.includes("-");
   function isRenderableType(g) {
     if (typeof g === "function") return !isElementClass(g);
@@ -1169,10 +1131,10 @@
   var GLOBAL_POLL_INTERVAL_MS = 50;
   var GLOBAL_POLL_TIMEOUT_MS = 3e4;
   function createExternalModules(onResolved) {
-    const cache = /* @__PURE__ */ new Map();
+    const cache =  new Map();
     let babelLoading = null;
-    const reportedMissing = /* @__PURE__ */ new Map();
-    const polling = /* @__PURE__ */ new Set();
+    const reportedMissing =  new Map();
+    const polling =  new Set();
     function ensureBabel() {
       if (window.Babel) return Promise.resolve();
       if (babelLoading) return babelLoading;
@@ -1190,7 +1152,7 @@
       });
       return babelLoading;
     }
-    const pending = /* @__PURE__ */ new Map();
+    const pending =  new Map();
     function load(kind, url, after) {
       const existing = pending.get(url);
       if (existing) return existing;
@@ -1214,7 +1176,6 @@
         }).code : src;
         const module = { exports: {} };
         const before = new Set(Object.keys(window));
-        //! nosemgrep: eval-and-function-constructor
         new Function("React", "module", "exports", "require", code)(
           getReact(),
           module,
@@ -1353,19 +1314,16 @@
     }
   }
 
-  // src/atomics.ts
   var ATOMIC_CSS = (
-    // layout
     ".fx{display:flex}.col{display:flex;flex-direction:column}.grid{display:grid}.ac{align-items:center}.jc{justify-content:center}.jb{justify-content:space-between}.f1{flex:1}.noshrink{flex-shrink:0}.wrap{flex-wrap:wrap}.fw5{font-weight:500}.fw6{font-weight:600}.fw7{font-weight:700}.fw8{font-weight:800}.fs11{font-size:11px}.fs12{font-size:12px}.fs13{font-size:13px}.fs14{font-size:14px}.fs15{font-size:15px}.fs16{font-size:16px}.fs20{font-size:20px}.fs22{font-size:22px}.upper{text-transform:uppercase}.tc{text-align:center}.nowrap{white-space:nowrap}.gap8{gap:8px}.gap10{gap:10px}.gap12{gap:12px}.gap16{gap:16px}.gap24{gap:24px}.m0{margin:0}.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.posrel{position:relative}.posabs{position:absolute}.round{border-radius:50%}.ohide{overflow:hidden}.bbox{box-sizing:border-box}.pointer{cursor:pointer}.w100{width:100%}.b0{border:none}"
   );
 
-  // src/helmet.ts
   var DESIGN_DOC_MODE_RE = /<meta\b[^>]*\bname\s*=\s*["']design_doc_mode["'][^>]*\b(?:content|value)\s*=\s*["'](\w+)["']/i;
   var CANVAS_BG_LIGHT = "#f0eee6";
   var CANVAS_BG_DARK = "#2e2c26";
   function createHelmetManager(doc, isStreaming) {
-    const mounted = /* @__PURE__ */ new Set();
-    const live = /* @__PURE__ */ new Map();
+    const mounted =  new Set();
+    const live =  new Map();
     let designDocMode = null;
     let canvasStyleEl = null;
     let appTheme = "light";
@@ -1494,7 +1452,6 @@
     return { compile, setDesignDocMode };
   }
 
-  // src/pseudo.ts
   function scanUnquotedUrl(css, i) {
     if (css[i] !== "u" && css[i] !== "U" || css.slice(i, i + 4).toLowerCase() !== "url(" || /[a-z0-9_-]/i.test(css[i - 1] ?? "")) {
       return -1;
@@ -1566,7 +1523,7 @@
   }
   function createPseudoSheet(doc) {
     let el = null;
-    const cache = /* @__PURE__ */ new Map();
+    const cache =  new Map();
     let n = 0;
     return (pseudo, css) => {
       const k = pseudo + "|" + css;
@@ -1588,9 +1545,8 @@
     };
   }
 
-  // src/registry.ts
   function createRegistry() {
-    const entries = /* @__PURE__ */ Object.create(null);
+    const entries =  Object.create(null);
     function get(name) {
       return entries[name] || (entries[name] = {
         html: "",
@@ -1599,7 +1555,7 @@
         jsStreaming: false,
         htmlStreaming: false,
         ver: 0,
-        subs: /* @__PURE__ */ new Set(),
+        subs:  new Set(),
         fetched: false
       });
     }
@@ -1618,7 +1574,6 @@
     };
   }
 
-  // src/runtime.ts
   var COMPONENT_DIR = ".";
   function createRuntime(doc = document) {
     const registry = createRegistry();
@@ -1788,9 +1743,8 @@
     };
   }
 
-  // src/stream-state.ts
   function createStreamTracker(staleMs = 6e4, now = Date.now) {
-    const since = /* @__PURE__ */ new Map();
+    const since =  new Map();
     const liveOne = (n) => {
       const t = since.get(n);
       if (t === void 0) return false;
@@ -1814,7 +1768,6 @@
     };
   }
 
-  // src/index.ts
   function hideRawTemplate() {
     const s = document.createElement("style");
     s.textContent = "x-dc{display:none!important}";
@@ -1822,7 +1775,6 @@
   }
   function loadScript(src, integrity) {
     return new Promise((resolve2, reject) => {
-      //! nosemgrep: create-script-element
       const s = document.createElement("script");
       s.src = src;
       if (integrity) {
@@ -1876,16 +1828,8 @@
       },
       __dcStreaming: (name) => streams.live(name),
       __dcSetProps: (name, overrides) => runtime.setProps(name, overrides),
-      /** Name of the component currently mounted as the page root — DC tools
-       *  push their template-stream here when targeting "the open page". */
       __dcRootName: () => rootName,
-      /** Editor bridge — the encoded, `data-dc-tpl`-annotated template source.
-       *  The host editor parses this into its own template DOM so it can map a
-       *  rendered node (carrying the same `data-dc-tpl`) back to the source
-       *  node that emitted it. Returns the encoded form (`sc-camel-*` attrs,
-       *  `<sc-raw-*>`/`<sc-helmet>` tags); the editor decodes on serialize. */
       __dcAnnotatedTemplate: (name) => runtime.annotatedTemplate(name),
-      /** Editor bridge — the *original* (decoded) template source. */
       __dcTemplateSource: (name) => runtime.templateSource(name),
       __dcBoot: () => {
         rootName = boot(runtime, document) ?? rootName;
@@ -1893,8 +1837,6 @@
       },
       __dcRegistry: runtime.registry.entries,
       getDC: (name) => runtime.getDC(name),
-      // `DCLogic` is the documented base class name; `StreamableLogic` is the
-      // implementation alias kept for any project that already references it.
       DCLogic: runtime.StreamableLogic,
       StreamableLogic: runtime.StreamableLogic
     };

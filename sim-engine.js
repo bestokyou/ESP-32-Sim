@@ -1,9 +1,4 @@
-/* __ESP32_ENGINE_GUARD__ */
 if(!window.ESP32Sim){ (function(){
-/* =========================================================================
-   ESP32 BOARD SIMULATOR — engine (compiler + interpreter + hardware model)
-   Headless: all DOM coupling goes through HOST / INPUTS.
-   ========================================================================= */
 const HOST = {
   log(){}, badge(){}, baud(){}, errLine(){}, source(){ return ""; }, canvas:null
 };
@@ -17,9 +12,6 @@ const ro=(get)=>({ get value(){ return get(); }, get checked(){ return get(); } 
 
 const EXAMPLES = {"★ เริ่มเขียนใหม่ (Blank)": "#include <Arduino.h>\n\nvoid setup() {\n  Serial.begin(115200);\n  Serial.println(\"Hello ESP32 Board!\");\n}\n\nvoid loop() {\n\n}\n", "★ ทดสอบอุปกรณ์บนบอร์ด (Self test)": "/* ทดสอบอุปกรณ์บนบอร์ดทั้งหมด : RGB + OLED + Buzzer + Relay + ปุ่ม + SHT31 */\n#include <Arduino.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n#include \"Adafruit_SHT31.h\"\n\n#define R_PIN 25\n#define G_PIN 26\n#define B_PIN 27\n#define aBtn 0\n#define bBtn 4\n#define relay01 32\n#define relay02 14\n#define BUZZER_PIN 33\n#define PWM_CHANNEL 0\n\nAdafruit_SSD1306 display(128, 64, &Wire, -1);\nAdafruit_SHT31 sht31 = Adafruit_SHT31();\nint step = 0;\n\nvoid setColor(bool r, bool g, bool b) {   // Common Anode : LOW = ติด\n  digitalWrite(R_PIN, r ? LOW : HIGH);\n  digitalWrite(G_PIN, g ? LOW : HIGH);\n  digitalWrite(B_PIN, b ? LOW : HIGH);\n}\n\nvoid setup() {\n  Serial.begin(115200);\n  pinMode(R_PIN, OUTPUT); pinMode(G_PIN, OUTPUT); pinMode(B_PIN, OUTPUT);\n  pinMode(aBtn, INPUT);   pinMode(bBtn, INPUT);\n  pinMode(relay01, OUTPUT); pinMode(relay02, OUTPUT);\n  digitalWrite(relay01, HIGH); digitalWrite(relay02, HIGH);\n  ledcSetup(PWM_CHANNEL, 2000, 8);\n  ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);\n  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);\n  sht31.begin(0x44);\n  Serial.println(\"Board self test...\");\n}\n\nvoid loop() {\n  float t = sht31.readTemperature();\n  float h = sht31.readHumidity();\n\n  display.clearDisplay();\n  display.setTextSize(1); display.setTextColor(WHITE);\n  display.setCursor(0, 0);  display.println(\"ESP32 BOARD TEST\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n  display.setCursor(0, 16); display.print(\"T = \"); display.print(t); display.println(\" C\");\n  display.setCursor(0, 28); display.print(\"H = \"); display.print(h); display.println(\" %\");\n  display.setCursor(0, 40); display.print(\"VR= \"); display.println(analogRead(36));\n  display.setCursor(0, 52);\n  display.print(\"A=\"); display.print(digitalRead(aBtn));\n  display.print(\"  B=\"); display.print(digitalRead(bBtn));\n  display.display();\n\n  step = (step + 1) % 4;\n  if (step == 0) { setColor(true, false, false); digitalWrite(relay01, LOW);  digitalWrite(relay02, HIGH); }\n  if (step == 1) { setColor(false, true, false); digitalWrite(relay01, HIGH); digitalWrite(relay02, LOW);  }\n  if (step == 2) { setColor(false, false, true); digitalWrite(relay01, LOW);  digitalWrite(relay02, LOW);  }\n  if (step == 3) {\n    setColor(true, true, true);\n    digitalWrite(relay01, HIGH); digitalWrite(relay02, HIGH);\n    ledcWriteTone(PWM_CHANNEL, 2000); delay(150); ledcWriteTone(PWM_CHANNEL, 0);\n  }\n\n  Serial.print(\"T:\"); Serial.print(t);\n  Serial.print(\" H:\"); Serial.print(h);\n  Serial.print(\" VR:\"); Serial.println(analogRead(36));\n  delay(1000);\n}\n", "ข้อ 1 · ปุ่ม A/B/A+B + RGB + OLED": "/* ==========================================================\n   ข้อ 1 : รับค่าจากปุ่ม แสดงผลไฟ RGB + จอ OLED\n   - กดปุ่ม A       -> ไฟสีแดง   , OLED : Button A\n   - กดปุ่ม B       -> ไฟสีเขียว , OLED : Button B\n   - กดปุ่ม A + B   -> ไฟสีขาว   , OLED : Button A+B\n   ========================================================== */\n#include <Arduino.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n\n// ---------- OLED ----------\n#define SCREEN_WIDTH   128\n#define SCREEN_HEIGHT  64\n#define OLED_RESET     -1\n#define SCREEN_ADDRESS 0x3C\nAdafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);\n\n// ---------- ปุ่มกด ----------\n#define aBtn 0\n#define bBtn 4\n\n// ---------- RGB LED ----------\n#define R_PIN 25\n#define G_PIN 26\n#define B_PIN 27\n#define COMMON_ANODE true\n\nint lastState = -1;   // เก็บสถานะเดิม เพื่อไม่ให้จอกระพริบ\n\n// ฟังก์ชันสั่งสีไฟ RGB (true = ติด)\nvoid setColor(bool r, bool g, bool b) {\n  if (COMMON_ANODE) {\n    digitalWrite(R_PIN, r ? LOW : HIGH);\n    digitalWrite(G_PIN, g ? LOW : HIGH);\n    digitalWrite(B_PIN, b ? LOW : HIGH);\n  } else {\n    digitalWrite(R_PIN, r ? HIGH : LOW);\n    digitalWrite(G_PIN, g ? HIGH : LOW);\n    digitalWrite(B_PIN, b ? HIGH : LOW);\n  }\n}\n\n// แสดงผลบนจอ OLED\nvoid showOLED(String btnText, String colorText) {\n  display.clearDisplay();\n\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 1 : BUTTON + RGB\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  display.setTextSize(2);          // ข้อความหลัก ตัวใหญ่\n  display.setCursor(0, 20);\n  display.println(btnText);\n\n  display.setTextSize(1);\n  display.setCursor(0, 50);\n  display.print(\"LED : \");\n  display.println(colorText);\n\n  display.display();\n}\n\nvoid setup() {\n  Serial.begin(115200);\n\n  pinMode(aBtn, INPUT);\n  pinMode(bBtn, INPUT);\n\n  pinMode(R_PIN, OUTPUT);\n  pinMode(G_PIN, OUTPUT);\n  pinMode(B_PIN, OUTPUT);\n  setColor(false, false, false);   // เริ่มต้นดับทุกดวง\n\n  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {\n    Serial.println(F(\"SSD1306 allocation failed\"));\n    for (;;);\n  }\n  delay(1000);\n  showOLED(\"No Button\", \"OFF\");\n}\n\nvoid loop() {\n  // ปุ่มเป็น active LOW : กด = 0 , ไม่กด = 1\n  bool aPress = (digitalRead(aBtn) == LOW);\n  bool bPress = (digitalRead(bBtn) == LOW);\n\n  int state = 0;\n  if (aPress && bPress)      state = 3;   // A + B\n  else if (aPress)           state = 1;   // A\n  else if (bPress)           state = 2;   // B\n\n  if (state != lastState) {               // เปลี่ยนสถานะเมื่อมีการกดเท่านั้น\n    lastState = state;\n    switch (state) {\n      case 1:\n        setColor(true, false, false);                 // แดง\n        showOLED(\"Button A\", \"RED\");\n        Serial.println(\"Button A -> RED\");\n        break;\n      case 2:\n        setColor(false, true, false);                 // เขียว\n        showOLED(\"Button B\", \"GREEN\");\n        Serial.println(\"Button B -> GREEN\");\n        break;\n      case 3:\n        setColor(true, true, true);                   // ขาว (แดง+เขียว+น้ำเงิน)\n        showOLED(\"Button A+B\", \"WHITE\");\n        Serial.println(\"Button A+B -> WHITE\");\n        break;\n      default:\n        setColor(false, false, false);                // ดับ\n        showOLED(\"No Button\", \"OFF\");\n        Serial.println(\"No Button -> OFF\");\n        break;\n    }\n  }\n  delay(50);      // กันปุ่มเด้ง (debounce แบบง่าย)\n}\n", "ข้อ 2 · Toggle ปุ่ม + รีเลย์ + OLED": "/* ==========================================================\n   ข้อ 2 : ปุ่มกดแบบ Toggle ควบคุมรีเลย์ + จอ OLED\n   - กดปุ่ม A      -> สลับสถานะ Relay 1   , OLED : Button A\n   - กดปุ่ม B      -> สลับสถานะ Relay 2   , OLED : Button B\n   - กดปุ่ม A + B  -> สลับสถานะ Relay 1+2 , OLED : Button A+B\n   (รีเลย์เป็น active LOW : LOW = ON , HIGH = OFF)\n   ========================================================== */\n#include <Arduino.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n\n// ---------- OLED ----------\n#define SCREEN_WIDTH   128\n#define SCREEN_HEIGHT  64\n#define OLED_RESET     -1\n#define SCREEN_ADDRESS 0x3C\nAdafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);\n\n// ---------- ปุ่มกด / รีเลย์ ----------\n#define aBtn    0\n#define bBtn    4\n#define relay01 32\n#define relay02 14\n\nbool relay1On = false;          // สถานะรีเลย์ 1\nbool relay2On = false;          // สถานะรีเลย์ 2\nString lastBtn = \"-\";           // ปุ่มที่กดล่าสุด\n\nunsigned long lastDebounceTime = 0;\nconst unsigned long debounceDelay = 50;\nbool lastPressed = false;       // สถานะ \"มีปุ่มถูกกดอยู่\" ครั้งก่อน\n\n// เขียนค่าออกรีเลย์\nvoid updateRelay() {\n  digitalWrite(relay01, relay1On ? LOW : HIGH);\n  digitalWrite(relay02, relay2On ? LOW : HIGH);\n}\n\nvoid showOLED() {\n  display.clearDisplay();\n\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 2 : TOGGLE RELAY\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  display.setTextSize(2);\n  display.setCursor(0, 16);\n  display.println(lastBtn);\n\n  display.setTextSize(1);\n  display.setCursor(0, 40);\n  display.print(\"Relay 1 : \");\n  display.println(relay1On ? \"ON\" : \"OFF\");\n  display.setCursor(0, 52);\n  display.print(\"Relay 2 : \");\n  display.println(relay2On ? \"ON\" : \"OFF\");\n\n  display.display();\n}\n\nvoid setup() {\n  Serial.begin(115200);\n\n  pinMode(aBtn, INPUT);\n  pinMode(bBtn, INPUT);\n  pinMode(relay01, OUTPUT);\n  pinMode(relay02, OUTPUT);\n  updateRelay();                 // เริ่มต้น OFF ทั้งคู่\n\n  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {\n    Serial.println(F(\"SSD1306 allocation failed\"));\n    for (;;);\n  }\n  delay(1000);\n  lastBtn = \"Ready\";\n  showOLED();\n}\n\nvoid loop() {\n  bool aPress = (digitalRead(aBtn) == LOW);\n  bool bPress = (digitalRead(bBtn) == LOW);\n  bool pressed = (aPress || bPress);\n\n  // จับเฉพาะ \"ขอบขาขึ้น\" คือเปลี่ยนจากไม่กด -> กด (Toggle 1 ครั้งต่อ 1 การกด)\n  if (pressed && !lastPressed && (millis() - lastDebounceTime) > debounceDelay) {\n    lastDebounceTime = millis();\n\n    delay(80);                   // รอเผื่อกดปุ่มที่สองตามมา (กรณี A+B)\n    // อ่านซ้ำแล้ว \"รวม\" กับค่าที่เห็นตอนแรก (||) ไม่ใช่เขียนทับ — ถ้ากดเร็วจนปล่อยไปแล้วภายใน 80ms\n    // จะยังนับปุ่มที่กดไว้ ไม่ใช่หลุดหายไปทั้งการกด\n    aPress = aPress || (digitalRead(aBtn) == LOW);\n    bPress = bPress || (digitalRead(bBtn) == LOW);\n\n    if (aPress && bPress) {                 // กด A + B\n      relay1On = !relay1On;\n      relay2On = !relay2On;\n      lastBtn  = \"Button A+B\";\n    } else if (aPress) {                    // กด A\n      relay1On = !relay1On;\n      lastBtn  = \"Button A\";\n    } else if (bPress) {                    // กด B\n      relay2On = !relay2On;\n      lastBtn  = \"Button B\";\n    }\n\n    updateRelay();\n    showOLED();\n    Serial.println(lastBtn + \" -> R1:\" + String(relay1On ? \"ON\" : \"OFF\") +\n                             \"  R2:\" + String(relay2On ? \"ON\" : \"OFF\"));\n  }\n\n  lastPressed = pressed;\n  delay(10);\n}\n", "ข้อ 3 · SHT31 + OLED + RGB + Buzzer": "/* ==========================================================\n   ข้อ 3 : อ่านอุณหภูมิ/ความชื้น SHT31 แสดงบน OLED\n           + แสดงสถานะไฟ RGB + เสียงเตือน Buzzer\n   - ต่ำกว่า 28 องศา   -> สีน้ำเงิน (Blue)\n   - 28 - 29 องศา     -> สีเหลือง (Yellow = แดง+เขียว)\n   - มากกว่า 29 องศา  -> สีแดง (Red) + เสียงเตือนที่ Buzzer\n   ========================================================== */\n#include <Arduino.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n#include \"Adafruit_SHT31.h\"\n\n// ---------- OLED ----------\n#define SCREEN_WIDTH   128\n#define SCREEN_HEIGHT  64\n#define OLED_RESET     -1\n#define SCREEN_ADDRESS 0x3C\nAdafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);\n\n// ---------- SHT31 ----------\nAdafruit_SHT31 sht31 = Adafruit_SHT31();\n\n// ---------- RGB LED ----------\n#define R_PIN 25\n#define G_PIN 26\n#define B_PIN 27\n#define COMMON_ANODE true\n\n// ---------- Buzzer ----------\n#define BUZZER_PIN  33\n#define PWM_CHANNEL 0\n\nvoid setColor(bool r, bool g, bool b) {\n  if (COMMON_ANODE) {\n    digitalWrite(R_PIN, r ? LOW : HIGH);\n    digitalWrite(G_PIN, g ? LOW : HIGH);\n    digitalWrite(B_PIN, b ? LOW : HIGH);\n  } else {\n    digitalWrite(R_PIN, r ? HIGH : LOW);\n    digitalWrite(G_PIN, g ? HIGH : LOW);\n    digitalWrite(B_PIN, b ? HIGH : LOW);\n  }\n}\n\n// เสียงเตือน : ดัง count ครั้ง\nvoid beep(int count, int freq, int onMs, int offMs) {\n  for (int i = 0; i < count; i++) {\n    ledcWriteTone(PWM_CHANNEL, freq);\n    delay(onMs);\n    ledcWriteTone(PWM_CHANNEL, 0);\n    delay(offMs);\n  }\n}\n\nvoid showOLED(float t, float h, String status) {\n  display.clearDisplay();\n\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 3 : SHT31 + RGB\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  display.setTextSize(2);\n  display.setCursor(0, 16);\n  display.print(\"T:\"); display.print(t, 1); display.print(\" C\");\n\n  display.setCursor(0, 34);\n  display.print(\"H:\"); display.print(h, 1); display.print(\" %\");\n\n  display.setTextSize(1);\n  display.setCursor(0, 54);\n  display.print(\"ST: \"); display.print(status);\n\n  display.display();\n}\n\nvoid setup() {\n  Serial.begin(115200);\n  Serial.println(\"EXAM 3 : SHT31 + OLED + RGB + BUZZER\");\n\n  pinMode(R_PIN, OUTPUT);\n  pinMode(G_PIN, OUTPUT);\n  pinMode(B_PIN, OUTPUT);\n  setColor(false, false, false);\n\n  ledcSetup(PWM_CHANNEL, 2000, 8);           // ตั้งค่า PWM ให้ buzzer\n  ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);\n  ledcWriteTone(PWM_CHANNEL, 0);\n\n  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {\n    Serial.println(F(\"SSD1306 allocation failed\"));\n    for (;;);\n  }\n  display.clearDisplay();\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 20);\n  display.println(\"Starting SHT31...\");\n  display.display();\n\n  if (!sht31.begin(0x44)) {\n    Serial.println(\"Couldn't find SHT31\");\n    while (1) delay(1);\n  }\n  delay(1000);\n}\n\nvoid loop() {\n  float t = sht31.readTemperature();\n  float h = sht31.readHumidity();\n\n  if (isnan(t) || isnan(h)) {\n    Serial.println(\"Failed to read from SHT31 sensor!\");\n    return;\n  }\n\n  String status;\n  if (t < 28) {                       // เย็น -> น้ำเงิน\n    setColor(false, false, true);\n    status = \"COLD  (BLUE)\";\n    Serial.print(\"=> Cold! (Blue)  \");\n  }\n  else if (t >= 28 && t <= 29) {      // ปกติ -> เหลือง\n    setColor(true, true, false);\n    status = \"WARM  (YELLOW)\";\n    Serial.print(\"=> Warm! (Yellow)  \");\n  }\n  else {                              // ร้อน -> แดง + เสียงเตือน\n    setColor(true, false, false);\n    status = \"HOT (RED) *BEEP*\";\n    Serial.print(\"=> Hot! (Red) + Buzzer  \");\n  }\n\n  Serial.print(\"Temp : \"); Serial.print(t);\n  Serial.print(\" C , Humidity : \"); Serial.print(h); Serial.println(\" %\");\n\n  showOLED(t, h, status);\n\n  if (t > 29) beep(2, 2000, 120, 120);   // เสียงเตือนเมื่ออุณหภูมิสูง\n\n  delay(1000);\n}\n", "ข้อ 4 · SHT31 + OLED + Relay + Buzzer": "/* ==========================================================\n   ข้อ 4 : อ่านอุณหภูมิ/ความชื้น SHT31 แสดงบน OLED\n           + ควบคุมรีเลย์ตามอุณหภูมิ + เสียงเตือน Buzzer\n   - ต่ำกว่า 28 องศา   -> Relay 1 ทำงาน\n   - 28 - 29 องศา     -> Relay 2 ทำงาน\n   - มากกว่า 29 องศา  -> ปิดรีเลย์ทั้งคู่ + เสียงเตือนที่ Buzzer\n   (รีเลย์เป็น active LOW : LOW = ON , HIGH = OFF)\n   ========================================================== */\n#include <Arduino.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n#include \"Adafruit_SHT31.h\"\n\n// ---------- OLED ----------\n#define SCREEN_WIDTH   128\n#define SCREEN_HEIGHT  64\n#define OLED_RESET     -1\n#define SCREEN_ADDRESS 0x3C\nAdafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);\n\n// ---------- SHT31 ----------\nAdafruit_SHT31 sht31 = Adafruit_SHT31();\n\n// ---------- Relay ----------\n#define relay01 32\n#define relay02 14\n\n// ---------- Buzzer ----------\n#define BUZZER_PIN  33\n#define PWM_CHANNEL 0\n\nvoid setRelay(bool r1, bool r2) {\n  digitalWrite(relay01, r1 ? LOW : HIGH);\n  digitalWrite(relay02, r2 ? LOW : HIGH);\n}\n\nvoid beep(int count, int freq, int onMs, int offMs) {\n  for (int i = 0; i < count; i++) {\n    ledcWriteTone(PWM_CHANNEL, freq);\n    delay(onMs);\n    ledcWriteTone(PWM_CHANNEL, 0);\n    delay(offMs);\n  }\n}\n\nvoid showOLED(float t, float h, bool r1, bool r2, String note) {\n  display.clearDisplay();\n\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 4 : SHT31 + RELAY\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  display.setTextSize(2);\n  display.setCursor(0, 14);\n  display.print(\"T:\"); display.print(t, 1); display.print(\" C\");\n\n  display.setCursor(0, 32);\n  display.print(\"H:\"); display.print(h, 1); display.print(\" %\");\n\n  display.setTextSize(1);\n  display.setCursor(0, 52);\n  display.print(\"R1:\"); display.print(r1 ? \"ON \" : \"OFF\");\n  display.print(\" R2:\"); display.print(r2 ? \"ON \" : \"OFF\");\n  display.print(\" \"); display.print(note);\n\n  display.display();\n}\n\nvoid setup() {\n  Serial.begin(115200);\n  Serial.println(\"EXAM 4 : SHT31 + OLED + RELAY + BUZZER\");\n\n  pinMode(relay01, OUTPUT);\n  pinMode(relay02, OUTPUT);\n  setRelay(false, false);\n\n  ledcSetup(PWM_CHANNEL, 2000, 8);\n  ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);\n  ledcWriteTone(PWM_CHANNEL, 0);\n\n  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {\n    Serial.println(F(\"SSD1306 allocation failed\"));\n    for (;;);\n  }\n  display.clearDisplay();\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 20);\n  display.println(\"Starting SHT31...\");\n  display.display();\n\n  if (!sht31.begin(0x44)) {\n    Serial.println(\"Couldn't find SHT31\");\n    while (1) delay(1);\n  }\n  delay(1000);\n}\n\nvoid loop() {\n  float t = sht31.readTemperature();\n  float h = sht31.readHumidity();\n\n  if (isnan(t) || isnan(h)) {\n    Serial.println(\"Failed to read from SHT31 sensor!\");\n    return;\n  }\n\n  bool r1 = false, r2 = false;\n  bool alarm = false;\n  String note = \"\";\n\n  if (t < 28) {                        // เย็น -> รีเลย์ 1 ทำงาน\n    r1 = true;  r2 = false;\n    note = \"\";\n    Serial.print(\"=> Relay 1 ON   \");\n  }\n  else if (t >= 28 && t <= 29) {       // ปกติ -> รีเลย์ 2 ทำงาน\n    r1 = false; r2 = true;\n    note = \"\";\n    Serial.print(\"=> Relay 2 ON   \");\n  }\n  else {                               // ร้อน -> ปิดรีเลย์ + เสียงเตือน\n    r1 = false; r2 = false;\n    alarm = true;\n    note = \"ALM\";\n    Serial.print(\"=> ALARM Buzzer \");\n  }\n\n  setRelay(r1, r2);\n\n  Serial.print(\"Temp : \"); Serial.print(t);\n  Serial.print(\" C , Humidity : \"); Serial.print(h); Serial.println(\" %\");\n\n  showOLED(t, h, r1, r2, note);\n\n  if (alarm) beep(3, 2500, 120, 100);\n\n  delay(1000);\n}\n", "ข้อ 5 · WiFi + RGB + Buzzer + IP บน OLED": "/* ==========================================================\n   ข้อ 5 : เชื่อมต่อ WiFi + แสดงสถานะด้วยไฟ RGB / Buzzer / OLED\n   - ยังไม่เชื่อมต่อ      -> ไฟสีแดงกระพริบ\n   - เชื่อมต่อสำเร็จ     -> ไฟสีน้ำเงินติดค้าง + เสียงที่ Buzzer\n   - แสดง IP Address ที่ได้รับ บนจอ OLED\n   ========================================================== */\n#include <Arduino.h>\n#include <WiFi.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n\n// ---------- แก้ชื่อ WiFi / รหัสผ่าน ตรงนี้ ----------\nconst char* ssid     = \"ESP32-AP\";\nconst char* password = \"12345678\";\n\n// ---------- OLED ----------\n#define SCREEN_WIDTH   128\n#define SCREEN_HEIGHT  64\n#define OLED_RESET     -1\n#define SCREEN_ADDRESS 0x3C\nAdafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);\n\n// ---------- RGB LED ----------\n#define R_PIN 25\n#define G_PIN 26\n#define B_PIN 27\n#define COMMON_ANODE true\n\n// ---------- Buzzer ----------\n#define BUZZER_PIN  33\n#define PWM_CHANNEL 0\n\nvoid setColor(bool r, bool g, bool b) {\n  if (COMMON_ANODE) {\n    digitalWrite(R_PIN, r ? LOW : HIGH);\n    digitalWrite(G_PIN, g ? LOW : HIGH);\n    digitalWrite(B_PIN, b ? LOW : HIGH);\n  } else {\n    digitalWrite(R_PIN, r ? HIGH : LOW);\n    digitalWrite(G_PIN, g ? HIGH : LOW);\n    digitalWrite(B_PIN, b ? HIGH : LOW);\n  }\n}\n\nvoid tone_(int freq, int ms) {\n  ledcWriteTone(PWM_CHANNEL, freq);\n  delay(ms);\n  ledcWriteTone(PWM_CHANNEL, 0);\n}\n\n// เสียงตอนเชื่อมต่อสำเร็จ (เสียงสูงขึ้น 3 ตัว)\nvoid soundConnected() {\n  tone_(1500, 120); delay(40);\n  tone_(2000, 120); delay(40);\n  tone_(2600, 200);\n}\n\n// หน้าจอตอนกำลังเชื่อมต่อ\nvoid showConnecting(int dot) {\n  display.clearDisplay();\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 5 : WiFi CONNECT\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  display.setTextSize(2);\n  display.setCursor(0, 20);\n  display.println(\"Connect\");\n\n  display.setTextSize(1);\n  display.setCursor(0, 44);\n  display.print(\"SSID: \"); display.println(ssid);\n  display.setCursor(0, 56);\n  display.print(\"Waiting\");\n  for (int i = 0; i < dot; i++) display.print(\".\");\n  display.display();\n}\n\n// หน้าจอตอนเชื่อมต่อสำเร็จ\nvoid showConnected() {\n  display.clearDisplay();\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 5 : WiFi CONNECT\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  display.setTextSize(2);\n  display.setCursor(0, 14);\n  display.println(\"ONLINE\");\n\n  display.setTextSize(1);\n  display.setCursor(0, 34);\n  display.print(\"SSID: \"); display.println(ssid);\n\n  display.drawRect(0, 44, 128, 20, WHITE);\n  display.setCursor(4, 48);\n  display.print(\"IP: \");\n  display.println(WiFi.localIP());\n  display.display();\n}\n\nvoid setup() {\n  Serial.begin(115200);\n\n  pinMode(R_PIN, OUTPUT);\n  pinMode(G_PIN, OUTPUT);\n  pinMode(B_PIN, OUTPUT);\n  setColor(false, false, false);\n\n  ledcSetup(PWM_CHANNEL, 2000, 8);\n  ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);\n  ledcWriteTone(PWM_CHANNEL, 0);\n\n  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {\n    Serial.println(F(\"SSD1306 allocation failed\"));\n    for (;;);\n  }\n  delay(500);\n\n  // ---------- เริ่มเชื่อมต่อ WiFi ----------\n  Serial.print(\"Connecting to \"); Serial.println(ssid);\n  WiFi.mode(WIFI_STA);\n  WiFi.begin(ssid, password);\n\n  bool led = false;\n  int  dot = 0;\n  while (WiFi.status() != WL_CONNECTED) {\n    led = !led;\n    setColor(led, false, false);      // ไฟแดงกระพริบ ระหว่างรอเชื่อมต่อ\n    showConnecting(dot);\n    dot = (dot + 1) % 4;\n    Serial.print(\".\");\n    delay(300);\n  }\n\n  // ---------- เชื่อมต่อสำเร็จ ----------\n  setColor(false, false, true);       // ไฟน้ำเงินติดค้าง\n  soundConnected();                   // เสียงแจ้งเตือน\n  showConnected();\n\n  Serial.println();\n  Serial.println(\"WiFi connected!\");\n  Serial.print(\"IP Address : \"); Serial.println(WiFi.localIP());\n}\n\nvoid loop() {\n  // ถ้าหลุดการเชื่อมต่อ ให้กลับไปกระพริบสีแดง แล้วต่อใหม่\n  if (WiFi.status() != WL_CONNECTED) {\n    Serial.println(\"WiFi disconnected... reconnecting\");\n    WiFi.begin(ssid, password);\n\n    bool led = false;\n    int  dot = 0;\n    while (WiFi.status() != WL_CONNECTED) {\n      led = !led;\n      setColor(led, false, false);\n      showConnecting(dot);\n      dot = (dot + 1) % 4;\n      delay(300);\n    }\n    setColor(false, false, true);\n    soundConnected();\n    showConnected();\n  }\n  delay(1000);\n}\n", "ข้อ 6 · กราฟิก WiFi Connect/Disconnect": "/* ==========================================================\n   ข้อ 6 : แสดงรูปภาพกราฟิกสถานะการเชื่อมต่อ WiFi บนจอ OLED\n   - ภาพที่ 1 : WiFi Connected     (ไอคอน WiFi เต็ม)\n   - ภาพที่ 2 : WiFi Disconnected  (ไอคอน WiFi มีขีดคาด)\n   - ยังไม่เชื่อมต่อ  -> ไฟ RGB สีแดงกระพริบ\n   - เชื่อมต่อสำเร็จ -> ไฟ RGB สีน้ำเงินติดค้าง\n   ภาพกราฟิกขนาด 40x40 px (สร้างแบบเดียวกับ image2cpp)\n   ========================================================== */\n#include <Arduino.h>\n#include <WiFi.h>\n#include <Wire.h>\n#include <Adafruit_GFX.h>\n#include <Adafruit_SSD1306.h>\n\n// ---------- แก้ชื่อ WiFi / รหัสผ่าน ตรงนี้ ----------\nconst char* ssid     = \"ESP32-AP\";\nconst char* password = \"12345678\";\n\n// ---------- OLED ----------\n#define SCREEN_WIDTH   128\n#define SCREEN_HEIGHT  64\n#define OLED_RESET     -1\n#define SCREEN_ADDRESS 0x3C\nAdafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);\n\n// ---------- RGB LED ----------\n#define R_PIN 25\n#define G_PIN 26\n#define B_PIN 27\n#define COMMON_ANODE true\n\n// ---------- Buzzer (เพิ่มเติม) ----------\n#define BUZZER_PIN  33\n#define PWM_CHANNEL 0\n\n// ==========================================================\n//  รูปที่ 1 : WiFi Connect  (40 x 40)\n// ==========================================================\nconst unsigned char wifi_on_bmp [] PROGMEM = {\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0xFF, 0x00, 0x00,\n  0x00, 0x07, 0xFF, 0xE0, 0x00,\n  0x00, 0x1F, 0xFF, 0xF8, 0x00,\n  0x00, 0x7F, 0x00, 0xFE, 0x00,\n  0x00, 0xF8, 0x00, 0x1F, 0x00,\n  0x01, 0xE0, 0x00, 0x07, 0x80,\n  0x01, 0xC1, 0xFF, 0x83, 0x80,\n  0x00, 0x87, 0xFF, 0xE1, 0x00,\n  0x00, 0x0F, 0xFF, 0xF0, 0x00,\n  0x00, 0x3F, 0x00, 0xFC, 0x00,\n  0x00, 0x1C, 0x00, 0x38, 0x00,\n  0x00, 0x08, 0x7E, 0x10, 0x00,\n  0x00, 0x01, 0xFF, 0x80, 0x00,\n  0x00, 0x03, 0xFF, 0xC0, 0x00,\n  0x00, 0x01, 0xC3, 0x80, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x3C, 0x00, 0x00,\n  0x00, 0x00, 0x7E, 0x00, 0x00,\n  0x00, 0x00, 0x7E, 0x00, 0x00,\n  0x00, 0x00, 0x7E, 0x00, 0x00,\n  0x00, 0x00, 0x7E, 0x00, 0x00,\n  0x00, 0x00, 0x3C, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00\n};\n\n// ==========================================================\n//  รูปที่ 2 : WiFi Disconnect  (40 x 40)\n// ==========================================================\nconst unsigned char wifi_off_bmp [] PROGMEM = {\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x04, 0x00, 0x00, 0x00, 0x00,\n  0x0E, 0x00, 0x00, 0x00, 0x00,\n  0x1F, 0x00, 0x00, 0x00, 0x00,\n  0x0F, 0x80, 0x00, 0x00, 0x00,\n  0x07, 0xC0, 0x00, 0x00, 0x00,\n  0x03, 0xE0, 0x00, 0x00, 0x00,\n  0x01, 0xF0, 0x00, 0x00, 0x00,\n  0x00, 0xF8, 0x00, 0x00, 0x00,\n  0x00, 0x7C, 0x00, 0x00, 0x00,\n  0x00, 0x3E, 0x00, 0x00, 0x00,\n  0x00, 0x1F, 0x3F, 0x00, 0x00,\n  0x00, 0x0F, 0x9F, 0xE0, 0x00,\n  0x00, 0x07, 0xCF, 0xF8, 0x00,\n  0x00, 0x73, 0xE0, 0xFE, 0x00,\n  0x00, 0xF9, 0xF0, 0x1F, 0x00,\n  0x01, 0xE0, 0xF8, 0x07, 0x80,\n  0x01, 0xC0, 0x7C, 0x83, 0x80,\n  0x00, 0x87, 0x3E, 0x61, 0x00,\n  0x00, 0x0F, 0x9F, 0x30, 0x00,\n  0x00, 0x3F, 0x0F, 0x9C, 0x00,\n  0x00, 0x1C, 0x07, 0xC8, 0x00,\n  0x00, 0x08, 0x73, 0xE0, 0x00,\n  0x00, 0x01, 0xF9, 0xF0, 0x00,\n  0x00, 0x03, 0xFC, 0xF8, 0x00,\n  0x00, 0x01, 0xC2, 0x7C, 0x00,\n  0x00, 0x00, 0x00, 0x3E, 0x00,\n  0x00, 0x00, 0x3C, 0x1F, 0x00,\n  0x00, 0x00, 0x7E, 0x0F, 0x80,\n  0x00, 0x00, 0x7E, 0x07, 0xC0,\n  0x00, 0x00, 0x7E, 0x03, 0xE0,\n  0x00, 0x00, 0x7E, 0x01, 0xF0,\n  0x00, 0x00, 0x3C, 0x00, 0xF8,\n  0x00, 0x00, 0x00, 0x00, 0x7C,\n  0x00, 0x00, 0x00, 0x00, 0x38,\n  0x00, 0x00, 0x00, 0x00, 0x10,\n  0x00, 0x00, 0x00, 0x00, 0x00,\n  0x00, 0x00, 0x00, 0x00, 0x00\n};\n\n#define ICON_W 40\n#define ICON_H 40\n\nbool wifiOK = false;\n\nvoid setColor(bool r, bool g, bool b) {\n  if (COMMON_ANODE) {\n    digitalWrite(R_PIN, r ? LOW : HIGH);\n    digitalWrite(G_PIN, g ? LOW : HIGH);\n    digitalWrite(B_PIN, b ? LOW : HIGH);\n  } else {\n    digitalWrite(R_PIN, r ? HIGH : LOW);\n    digitalWrite(G_PIN, g ? HIGH : LOW);\n    digitalWrite(B_PIN, b ? HIGH : LOW);\n  }\n}\n\nvoid tone_(int freq, int ms) {\n  ledcWriteTone(PWM_CHANNEL, freq);\n  delay(ms);\n  ledcWriteTone(PWM_CHANNEL, 0);\n}\n\n// วาดหน้าจอตามสถานะ\nvoid showStatus(bool connected) {\n  display.clearDisplay();\n\n  display.setTextSize(1);\n  display.setTextColor(WHITE);\n  display.setCursor(0, 0);\n  display.println(\"EXAM 6 : WiFi GRAPHIC\");\n  display.drawLine(0, 10, 127, 10, WHITE);\n\n  // วาดรูปกราฟิกตรงกลาง\n  display.drawBitmap(44, 13, connected ? wifi_on_bmp : wifi_off_bmp,\n                     ICON_W, ICON_H, WHITE);\n\n  display.setTextSize(1);\n  if (connected) {\n    display.setCursor(22, 55);\n    display.print(\"WiFi Connected\");\n  } else {\n    display.setCursor(16, 55);\n    display.print(\"WiFi Disconnect\");\n  }\n  display.display();\n}\n\nvoid setup() {\n  Serial.begin(115200);\n\n  pinMode(R_PIN, OUTPUT);\n  pinMode(G_PIN, OUTPUT);\n  pinMode(B_PIN, OUTPUT);\n  setColor(false, false, false);\n\n  ledcSetup(PWM_CHANNEL, 2000, 8);\n  ledcAttachPin(BUZZER_PIN, PWM_CHANNEL);\n  ledcWriteTone(PWM_CHANNEL, 0);\n\n  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {\n    Serial.println(F(\"SSD1306 allocation failed\"));\n    for (;;);\n  }\n  delay(500);\n\n  showStatus(false);                 // เริ่มต้น = ยังไม่เชื่อมต่อ\n\n  Serial.print(\"Connecting to \"); Serial.println(ssid);\n  WiFi.mode(WIFI_STA);\n  WiFi.begin(ssid, password);\n}\n\nvoid loop() {\n  if (WiFi.status() != WL_CONNECTED) {\n    // ---------- ยังไม่เชื่อมต่อ : รูป Disconnect + ไฟแดงกระพริบ ----------\n    if (wifiOK) {                    // เพิ่งหลุดการเชื่อมต่อ\n      wifiOK = false;\n      showStatus(false);\n      WiFi.begin(ssid, password);\n      Serial.println(\"WiFi disconnected... reconnecting\");\n    }\n    setColor(true, false, false);    // แดงติด\n    delay(300);\n    setColor(false, false, false);   // แดงดับ -> กระพริบ\n    delay(300);\n    Serial.print(\".\");\n  }\n  else {\n    // ---------- เชื่อมต่อสำเร็จ : รูป Connect + ไฟน้ำเงินติดค้าง ----------\n    if (!wifiOK) {                   // เพิ่งเชื่อมต่อได้\n      wifiOK = true;\n      showStatus(true);\n      tone_(2000, 100); delay(50); tone_(2600, 150);   // เสียงแจ้งเตือน\n      Serial.println();\n      Serial.println(\"WiFi connected!\");\n      Serial.print(\"IP Address : \"); Serial.println(WiFi.localIP());\n    }\n    setColor(false, false, true);    // น้ำเงินติดค้าง\n    delay(500);\n  }\n}\n"};
 
-/* =========================================================================
-   ESP32 BOARD SIMULATOR — Arduino C++ subset : Preprocessor / Lexer / Parser
-   ========================================================================= */
 const SKETCH = "sketch.ino";
 
 class CompileError extends Error{
@@ -29,7 +21,6 @@ class RuntimeErr extends Error{
   constructor(msg,line){ super(msg); this.line=line||0; }
 }
 
-/* ---------------- preprocessor ---------------- */
 function preprocess(src){
   const macros = {}, includes = [];
   const lines = src.split("\n");
@@ -46,12 +37,11 @@ function preprocess(src){
       macros[m[1]] = val.trim();
       return "";
     }
-    return ""; // #ifdef / #pragma / etc -> ignore
+    return ""; 
   });
   return { code: out.join("\n"), macros, includes };
 }
 
-/* ---------------- lexer ---------------- */
 const OPLIST = ["<<=",">>=","->","++","--","<<",">>","<=",">=","==","!=","&&","||",
   "+=","-=","*=","/=","%=","&=","|=","^=","::","{","}","(",")","[","]",";",",",".",
   "+","-","*","/","%","=","<",">","!","~","&","|","^","?",":"];
@@ -118,7 +108,6 @@ function unesc(c){
   return ({n:"\n",t:"\t",r:"\r","0":"\0","\\":"\\","'":"'",'"':'"'})[c] ?? c;
 }
 
-/* macro expansion on token stream */
 function expandMacros(toks, macros){
   let out=toks, pass=0;
   while(pass++<8){
@@ -138,7 +127,6 @@ function expandMacros(toks, macros){
   return out;
 }
 
-/* ---------------- parser ---------------- */
 const PRIMS = new Set(["void","int","float","double","bool","boolean","char","byte","long","short",
   "unsigned","signed","String","uint8_t","uint16_t","uint32_t","int8_t","int16_t","int32_t",
   "size_t","word","auto"]);
@@ -162,12 +150,10 @@ class Parser{
   }
   eatOp(v){ if(this.isOp(v)){ this.next(); return true;} return false; }
 
-  /* --- type detection --- */
   atType(){
     const c=this.cur;
     if(c.t!=="id") return false;
     if(PRIMS.has(c.v)||QUALS.has(c.v)) return true;
-    // ClassName ident  ->  declaration
     if(/^[A-Z][A-Za-z0-9_]*$/.test(c.v)){
       const n=this.peek(1);
       if(n && n.t==="id") return true;
@@ -180,7 +166,7 @@ class Parser{
           (parts.length===0 && /^[A-Z]/.test(this.cur.v)))){
       const w=this.next().v;
       if(w!=="PROGMEM") parts.push(w);
-      if(!PRIMS.has(w)&&!QUALS.has(w)) break;              // class name : stop
+      if(!PRIMS.has(w)&&!QUALS.has(w)) break;              
       if(this.cur.t==="id" && !PRIMS.has(this.cur.v) && !QUALS.has(this.cur.v)) break;
     }
     let ptr=0; while(this.eatOp("*")) ptr++;
@@ -200,7 +186,6 @@ class Parser{
   parseTopLevel(){
     const ln=this.line;
     if(!this.atType()){
-      // maybe stray expression at top level
       throw new CompileError("expected unqualified-id before '"+String(this.cur.v)+"'", ln);
     }
     const type=this.parseType();
@@ -210,7 +195,6 @@ class Parser{
     this.next();
     const isClass = !PRIMS.has(type.raw.split(" ").pop()) && /^[A-Z]/.test(type.raw.split(" ").pop()||"");
     if(this.isOp("(") && !isClass){
-      // function definition / prototype
       const params=this.parseParams();
       if(this.eatOp(";")) return {k:"proto",name:nameTok.v,line:ln};
       const body=this.parseBlock();
@@ -244,7 +228,7 @@ class Parser{
         this.expect("op","]");
       }
       if(this.isId("PROGMEM")) this.next();
-      if(this.isOp("(")){                       // object ctor  Adafruit_SSD1306 d(...)
+      if(this.isOp("(")){                       
         ctor=this.parseArgs();
       } else if(this.eatOp("=")){
         init = this.isOp("{") ? this.parseInitList() : this.parseAssign();
@@ -281,7 +265,6 @@ class Parser{
     return a;
   }
 
-  /* --- statements --- */
   parseBlock(){
     const ln=this.line;
     this.expect("op","{");
@@ -352,7 +335,7 @@ class Parser{
     if(!this.isOp(";")){
       if(this.atType()){
         const t=this.parseType(); const nm=this.expect("id").v;
-        init=this.finishVarDecl(t,nm,ln,false);   // consumes ';'
+        init=this.finishVarDecl(t,nm,ln,false);   
       } else { init={k:"expr",e:this.parseExpr(),line:ln}; this.expect("op",";"); }
     } else this.next();
     let cond=null;
@@ -385,7 +368,6 @@ class Parser{
     return {k:"switch",d,cases,line:ln};
   }
 
-  /* --- expressions --- */
   parseExpr(){
     let e=this.parseAssign();
     while(this.isOp(",")){ this.next(); const r=this.parseAssign(); e={k:"comma",l:e,r,line:e.line}; }
@@ -445,7 +427,6 @@ class Parser{
         this.expect("op",")"); }
       return {k:"num",v:4,f:false,line:ln};
     }
-    // cast : (float)x
     if(this.isOp("(") && this.peek(1).t==="id" && PRIMS.has(this.peek(1).v)){
       const save=this.p;
       this.next();
@@ -472,7 +453,7 @@ class Parser{
     if(c.t==="num"){ this.next(); return {k:"num",v:c.v.v,f:c.v.f,line:ln}; }
     if(c.t==="str"){ this.next();
       let s=c.v;
-      while(this.cur.t==="str"){ s+=this.next().v; }        // "a" "b"
+      while(this.cur.t==="str"){ s+=this.next().v; }        
       return {k:"str",v:s,line:ln}; }
     if(c.t==="char"){ this.next(); return {k:"chr",v:c.v,line:ln}; }
     if(c.t==="id"){ this.next(); return {k:"id",v:c.v,line:ln}; }
@@ -484,17 +465,14 @@ class Parser{
 }
 
 
-/* =========================================================================
-   HARDWARE RUNTIME — pins / RGB / relays / OLED / buzzer / SHT31 / WiFi
-   ========================================================================= */
 const PIN = { R:25, G:26, B:27, BTN_A:0, BTN_B:4, RELAY1:32, RELAY2:14, BUZZER:33, VR:36 };
 
 const HW = {
   t0:0, speed:1,
-  pinMode:{}, pinVal:{}, pwm:{},          // pwm[pin] = duty 0..255 (null = digital)
+  pinMode:{}, pinVal:{}, pwm:{},          
   adcBits:12,
   btnA:false, btnB:false,
-  ledc:{},                                 // channel -> {freq,res,pin,duty}
+  ledc:{},                                 
   toneFreq:0,
   serialBaud:0, serialOpen:false, rx:[],
   wifi:{ mode:1, ssid:"", pass:"", tStart:0, connected:false, beganAt:-1 },
@@ -518,21 +496,20 @@ const HW = {
     if(p===PIN.BUZZER) this.setTone(0);
   },
   digitalRead(p){
-    if(p===PIN.BTN_A) return this.btnA?0:1;         // active LOW
+    if(p===PIN.BTN_A) return this.btnA?0:1;         
     if(p===PIN.BTN_B) return this.btnB?0:1;
     return this.pinVal[p]??1;
   },
   analogRead(p){
     const max=(1<<this.adcBits)-1;
     if(p===PIN.VR||p===39||p===34||p===35){
-      const raw = +UI.el.adcR.value;                // 0..4095
+      const raw = +UI.el.adcR.value;                
       return Math.round(raw/4095*max);
     }
     return 0;
   },
   analogWrite(p,d){ this.pwm[p]=Math.max(0,Math.min(255,d)); this.dirty=true; },
 
-  /* ---- LEDC (ESP32 PWM) ---- */
   ledcSetup(ch,freq,res){ this.ledc[ch]=Object.assign(this.ledc[ch]||{},{freq,res,pin:this.ledc[ch]?.pin??null}); return freq; },
   ledcAttachPin(pin,ch){ this.ledc[ch]=Object.assign(this.ledc[ch]||{freq:5000,res:8},{pin}); },
   ledcDetachPin(pin){
@@ -565,12 +542,10 @@ const HW = {
     this.dirty=true;
   },
 
-  /* ---- sensors ---- */
   shtOk(){ return UI.el.shtOn.checked; },
   temp(){ return +UI.el.tempR.value + (Math.random()-0.5)*0.04; },
   hum(){  return +UI.el.humR.value  + (Math.random()-0.5)*0.08; },
 
-  /* ---- wifi ---- */
   wifiBegin(ssid,pass){
     this.wifi.ssid=ssid; this.wifi.pass=pass;
     this.wifi.beganAt=this.millis(); this.wifi.connected=false;
@@ -578,27 +553,25 @@ const HW = {
   },
   wifiStatus(){
     const w=this.wifi;
-    if(w.beganAt<0) return 0;                            // WL_IDLE_STATUS
+    if(w.beganAt<0) return 0;                            
     const on=UI.el.apOn.checked;
     const okSsid = w.ssid===UI.el.apSsid.value;
     const okPass = w.pass===UI.el.apPass.value;
-    if(!on) return 6;                                    // WL_DISCONNECTED
+    if(!on) return 6;                                    
     if(!okSsid) return 6;
-    if(!okPass) return 4;                                // WL_CONNECT_FAILED (keeps retrying)
+    if(!okPass) return 4;                                
     if(this.millis()-w.beganAt < +UI.el.apDelay.value) return 6;
     if(!w.connected){ w.connected=true; this.dirty=true; }
-    return 3;                                            // WL_CONNECTED
+    return 3;                                            
   },
   wifiIP(){ return this.wifiStatus()===3 ? "192.168.1.87" : "0.0.0.0"; },
 
-  /* ---- visual helpers ---- */
-  chanLevel(pin){                    // 0..1 brightness (common anode)
+  chanLevel(pin){                    
     if(this.pwm[pin]!=null) return 1-this.pwm[pin]/255;
     return (this.pinVal[pin]??1)===0 ? 1 : 0;
   }
 };
 
-/* ---------------- audio ---------------- */
 const Audio_ = {
   ctx:null, osc:null, gain:null, cur:0,
   init(){
@@ -624,8 +597,6 @@ const Audio_ = {
   }
 };
 
-/* ---------------- OLED SSD1306 ---------------- */
-/* Adafruit GFX classic 5x7 font (glcdfont.c), printable ASCII + degree sign */
 const GLCD_FONT=(()=>{
   const hex="0000000000 00005F0000 0007000700 147F147F14 242A7F2A12 2313086462 3649562050 0008070300 "+
     "001C224100 0041221C00 2A1C7F1C2A 08083E0808 0080703000 0808080808 0000606000 2010080402 "+
@@ -741,7 +712,6 @@ const OLED = {
   ink(rows){ let n=0; for(const r of rows) for(let i=0;i<6;i++) if((r>>i)&1) n++; return n; },
   glyph(ch){
     if(this.glyphs[ch]) return this.glyphs[ch];
-    // real Adafruit GFX 5x7 font (column bytes, bit0 = top) -> rows with bit x = column x
     const cols=GLCD_FONT[ch];
     if(cols){
       const rows=[];
@@ -779,8 +749,6 @@ const OLED = {
   paint(){
     const cv=HOST.canvas;
     if(!cv) return;
-    // canvas larger than 128x64: paint 1:1 offscreen, then upscale by an integer factor
-    // so every OLED pixel is an identical square block (stays crisp when the board is scaled)
     let g=cv.getContext("2d"), dst=null;
     if(cv.width!==this.W||cv.height!==this.H){
       if(!this.off){ this.off=document.createElement("canvas"); this.off.width=this.W; this.off.height=this.H; }
@@ -803,9 +771,6 @@ const OLED = {
 };
 
 
-/* =========================================================================
-   VALUES + INTERPRETER
-   ========================================================================= */
 const VI=n=>({t:"int",v:Number.isFinite(n)?Math.trunc(n):0});
 const VF=n=>({t:"float",v:n});
 const VS=s=>({t:"str",v:String(s)});
@@ -868,7 +833,6 @@ function typeOfDecl(raw,ptr){
   return "obj";
 }
 
-/* ---------------- constants ---------------- */
 const CONSTS={
   HIGH:1,LOW:0,INPUT:1,OUTPUT:3,INPUT_PULLUP:5,INPUT_PULLDOWN:9,
   true:1,false:0,LED_BUILTIN:2,PI:Math.PI,M_PI:Math.PI,HALF_PI:Math.PI/2,TWO_PI:Math.PI*2,
@@ -896,7 +860,6 @@ const BUILTIN_FUNCS=new Set(["pinMode","digitalWrite","digitalRead","analogRead"
  "Adafruit_SSD1306","Adafruit_SHT31","IPAddress","dtostrf","sprintf","snprintf"]);
 const BUILTIN_OBJS=new Set(["Serial","Serial1","Serial2","Wire","SPI","WiFi","ESP","EEPROM"]);
 
-/* ---------------- serial console ---------------- */
 const SER={
   line:"",
   out(s){
@@ -909,7 +872,6 @@ const SER={
   clear(){ this.line=""; }
 };
 
-/* ---------------- interpreter ---------------- */
 class Scope{
   constructor(p){ this.m=new Map(); this.p=p; }
   find(n){ let s=this; while(s){ if(s.m.has(n)) return s.m.get(n); s=s.p; } return null; }
@@ -977,7 +939,6 @@ class Interp{
     return {t:"obj",v:{cls}};
   }
 
-  /* ---------- statements ---------- */
   *exec(s,env){
     this.line=s.line||this.line;
     switch(s.k){
@@ -1048,7 +1009,6 @@ class Interp{
     }
   }
 
-  /* ---------- expressions ---------- */
   *ev(n,env){
     if(!n) return VOID;
     this.line=n.line||this.line;
@@ -1167,7 +1127,6 @@ class Interp{
     this.err("lvalue required as left operand of assignment");
   }
 
-  /* ---------- calls ---------- */
   *call(n,env){
     const c=n.callee;
     if(c.k==="member"){
@@ -1275,7 +1234,6 @@ class Interp{
     if(objv.t!=="obj") this.err("request for member '"+m+"' in non-class type");
     const cls=objv.v.cls;
     const N=i=>num(A[i]);
-    /* ---- Serial ---- */
     if(cls==="Serial"||cls==="Serial1"||cls==="Serial2"){
       switch(m){
         case "begin": HW.serialBaud=N(0)||115200; HW.serialOpen=true; UI.setBaud(HW.serialBaud); return VOID;
@@ -1294,7 +1252,6 @@ class Interp{
         case "setTimeout": return VOID;
       }
     }
-    /* ---- OLED ---- */
     if(cls==="SSD1306"){
       const C=i=>A.length>i?num(A[i]):1;
       switch(m){
@@ -1337,7 +1294,6 @@ class Interp{
         case "ssd1306_command": case "setRotation": case "setFont": return VOID;
       }
     }
-    /* ---- SHT31 ---- */
     if(cls==="SHT31"){
       switch(m){
         case "begin": return VB(HW.shtOk());
@@ -1348,7 +1304,6 @@ class Interp{
         case "readStatus": return VI(0);
       }
     }
-    /* ---- WiFi ---- */
     if(cls==="WiFi"){
       switch(m){
         case "mode": HW.wifi.mode=N(0); return VB(true);
@@ -1414,9 +1369,6 @@ class Interp{
   }
 }
 
-/* =========================================================================
-   SEMANTIC CHECK (compile-time "was not declared in this scope")
-   ========================================================================= */
 function checkProgram(ast,includes){
   const errs=[];
   const globals=new Set(["setup","loop"]);
@@ -1427,7 +1379,6 @@ function checkProgram(ast,includes){
   const known=n=> globals.has(n)||BUILTIN_FUNCS.has(n)||BUILTIN_OBJS.has(n)||
                   Object.prototype.hasOwnProperty.call(CONSTS,n);
 
-  // library checks
   const needs=(cls,hdr,msg)=>{
     const used=ast.some(d=>(d.k==="var"&&d.type.raw.includes(cls)));
     if(used&&!includes.some(h=>h.toLowerCase().includes(hdr)))
@@ -1499,9 +1450,6 @@ function checkProgram(ast,includes){
 }
 
 
-/* =========================================================================
-   UI + SCHEDULER
-   ========================================================================= */
 const UI = {
   el:{
     code:{ get value(){ return HOST.source(); } },
@@ -1539,7 +1487,6 @@ const UI = {
 
 
 
-/* ---------------- editor ---------------- */
 const KW1=new Set(["int","float","double","char","bool","boolean","void","long","short","byte","unsigned",
   "signed","const","static","String","uint8_t","uint16_t","uint32_t","size_t","word","volatile","struct","PROGMEM"]);
 const KW3=new Set(["if","else","for","while","do","switch","case","default","break","continue","return",
@@ -1572,7 +1519,6 @@ function highlight(src){
 let errLine=0;
 function refreshEditor(){ HOST.errLine(errLine); }
 
-/* ---------------- compile & run ---------------- */
 const RUN={ interp:null, gen:null, timer:null, running:false, srcLines:[] };
 
 function stopRun(silent){
@@ -1606,7 +1552,6 @@ function compileAndRun(){
     if(e.fn) UI.log(SKETCH+": In function '"+e.fn+"':","");
     return failCompile(e.line,e.msg);
   }
-  // fake compile stats
   const bytes=246000+src.length*7+Math.floor(Math.random()*400);
   const glob=14200+Math.floor(src.length*1.3);
   UI.log("Sketch uses "+bytes+" bytes ("+(bytes/1310720*100).toFixed(0)+"%) of program storage space. Maximum is 1310720 bytes.");
@@ -1687,7 +1632,6 @@ function restartSketch(){
   startProgram(ast,inc);
 }
 
-/* ---------------- exported API ---------------- */
 function lvl(p){
   if(HW.pwm[p]!=null) return (100-Math.round(HW.pwm[p]/255*100))+"%";
   return (HW.pinVal[p]??1)===0?"ON":"off";

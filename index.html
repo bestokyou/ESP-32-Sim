@@ -58,7 +58,7 @@ body{
     radial-gradient(900px 700px at 100% 110%, var(--bg-a), transparent 60%);
   -webkit-font-smoothing:antialiased; overflow:hidden;
 }
-body::before{ /* soft diagonal light streaks */
+body::before{ 
   content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
   background:
     linear-gradient(118deg, transparent 52%, rgba(255,255,255,.35) 52.2%, rgba(255,255,255,.12) 62%, transparent 62.2%),
@@ -76,7 +76,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
   -webkit-backdrop-filter:blur(22px) saturate(160%); backdrop-filter:blur(22px) saturate(160%);
 }
 
-/* ---------- header ---------- */
 .top{ display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
 .brandbar{ display:flex; align-items:center; gap:10px; padding:8px 10px 8px 22px; border-radius:30px; }
 .brand{ display:flex; align-items:center; gap:12px; padding-right:18px; margin-right:6px; border-right:1px solid var(--line-2); }
@@ -108,7 +107,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .round svg.i{ width:22px; height:22px; }
 .kbd-hint{ font-size:12px; color:var(--muted); font-family:"JetBrains Mono",monospace; }
 
-/* ---------- layout ---------- */
 .main{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
 .main.board-only{ grid-template-columns:minmax(0,1fr); }
 .main.board-only .col-left{ display:none; }
@@ -118,7 +116,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .icon-btn{ width:36px; height:36px; display:grid; place-items:center; border-radius:10px; border:0; background:transparent; color:var(--muted); position:relative; }
 .icon-btn:hover{ background:var(--glass-strong); color:var(--text); }
 
-/* ---------- editor ---------- */
 .editor-card{ flex:1 1 auto; }
 .ftab{ display:flex; align-items:center; gap:10px; height:46px; padding:0 18px; border-radius:16px 16px 0 0; background:var(--glass-strong); font-weight:600; font-size:15px; margin-bottom:-1px; }
 .ftab .dot{ width:9px; height:9px; border-radius:50%; background:var(--blue); transition:opacity .2s; }
@@ -148,7 +145,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .float-btn{ position:absolute; right:18px; bottom:16px; display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 16px; border-radius:20px; border:1px solid var(--stroke); background:var(--glass); -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); color:var(--blue); font-weight:500; font-size:14px; box-shadow:var(--shadow); z-index:3; }
 .float-btn:hover{ background:var(--glass-strong); }
 
-/* ---------- console ---------- */
 .console-card{ flex:0 0 300px; }
 .ctabs{ display:flex; align-items:center; gap:4px; padding:10px 14px 0 14px; border-bottom:1px solid var(--line); }
 .ctab{ display:inline-flex; align-items:center; gap:9px; height:44px; padding:0 16px; border:0; background:transparent; color:var(--muted); font-size:14px; font-weight:500; border-bottom:2.5px solid transparent; border-radius:12px 12px 0 0; position:relative; }
@@ -181,7 +177,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .sendrow input:focus{ border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
 .sendrow .btn{ height:44px; padding:0 22px; }
 
-/* ---------- board ---------- */
 .board-card{ flex:1 1 auto; }
 .board-head{ padding:16px 16px 0 26px; }
 .board-head h2{ margin:0; font-size:17px; font-weight:600; }
@@ -207,7 +202,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .board{ position:absolute; left:0; top:0; width:560px; height:500px; transform-origin:0 0; font-family:"JetBrains Mono",monospace; }
 .board .pcb{ position:absolute; inset:0; filter:drop-shadow(0 26px 30px rgba(20,60,140,.35)); }
 .lbl{ position:absolute; font-size:9.5px; color:#cfe2ff; letter-spacing:.3px; white-space:nowrap; opacity:.92; }
-/* ---- 2D board: positions/shapes follow the 3D model top view (1px = 0.25mm, origin top-left) ---- */
 .module{ position:absolute; left:213px; top:66px; width:136px; height:80px; border-radius:3px; background:linear-gradient(180deg,#f4f0e6,#d8d0bb); border:1px solid #a49b84; box-shadow:0 4px 10px rgba(0,0,0,.35); }
 .module .shield{ position:absolute; left:27px; top:6px; width:80px; height:64px; border-radius:2px; background:linear-gradient(160deg,#fbfcfd,#d7dde4 60%,#c3cbd4); border:1px solid #a9b2bc; }
 .module .name{ position:absolute; left:0; right:0; top:25px; text-align:center; font-size:7px; line-height:1.3; color:#3e4955; letter-spacing:.3px; }
@@ -249,7 +243,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .buzzer.on{ box-shadow:0 0 0 7px rgba(245,158,11,.25),0 0 26px rgba(245,158,11,.65); }
 .usb{ position:absolute; left:248px; top:453px; width:64px; height:28px; border-radius:3px; background:linear-gradient(180deg,#fdfdfe,#c4ccd5); border:1px solid #8f99a4; box-shadow:0 3px 6px rgba(0,0,0,.25); }
 
-/* part labels (overlay is unscaled so text stays readable) */
 .seg button.on{ background:var(--blue); color:#fff; box-shadow:var(--shadow-btn); }
 .tags{ position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; z-index:8; opacity:0; transition:opacity .2s; }
 .tags.show{ opacity:1; }
@@ -281,7 +274,6 @@ svg.i{ width:18px; height:18px; flex:0 0 auto; stroke:currentColor; fill:none; s
 .pin-row.hi .d{ background:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); }
 .pin-row.hi .v{ color:var(--blue); font-weight:600; }
 
-/* ---------- sensors ---------- */
 .sensor-card{ flex:0 0 auto; }
 .sensor-head{ padding:16px 16px 4px 26px; }
 .sensor-head h2{ margin:0; font-size:17px; font-weight:600; }
@@ -315,7 +307,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 .switch input:checked::after{ transform:translateX(16px); }
 .hidden{ display:none !important; }
 
-/* ---------- popovers / modal / toast ---------- */
 .menu{ position:absolute; right:0; top:42px; min-width:220px; padding:6px; border-radius:14px; background:var(--glass-strong); border:1px solid var(--stroke); box-shadow:var(--shadow); -webkit-backdrop-filter:blur(22px); backdrop-filter:blur(22px); z-index:30; display:none; }
 .menu.open{ display:block; }
 .menu button{ width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border:0; border-radius:9px; background:transparent; font-size:13.5px; color:var(--text); text-align:left; }
@@ -340,7 +331,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 ::-webkit-scrollbar-track{ background:transparent; }
 .screen::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.18); background-clip:padding-box; }
 
-/* ---------- responsive ---------- */
 @media (max-width:1180px){
   body{ overflow:auto; }
   .app{ height:auto; min-height:100vh; padding:14px 16px 20px; }
@@ -413,7 +403,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 </svg>
 
 <div class="app">
-  <!-- ================= HEADER ================= -->
   <header class="top">
     <div class="brandbar glass">
       <div class="brand">
@@ -437,7 +426,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
     </div>
   </header>
 
-  <!-- ================= MAIN ================= -->
   <main class="main" id="main">
     <section class="col col-left">
       <div class="card glass editor-card" id="editorCard">
@@ -535,11 +523,9 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                   <defs>
                     <clipPath id="pcbHex"><polygon points="148,16 412,16 543.2,250 412,484 148,484 16.8,250"/></clipPath>
                   </defs>
-                  <!-- ลาย PCB เดียวกับโมเดล 3D (export จาก PCB_Paint ใน board-source.blend, UV = กรอบ x17–543 y16–484) -->
                   <polygon points="148,16 412,16 543.2,250 412,484 148,484 16.8,250" fill="#0b1f42"/>
                   <image href="assets/textures/pcb-top.png" x="17" y="16" width="526" height="468" preserveAspectRatio="none" clip-path="url(#pcbHex)"/>
                   <polygon points="148,16 412,16 543.2,250 412,484 148,484 16.8,250" fill="none" stroke="#06142b" stroke-width="2"/>
-                  <!-- ชิ้นส่วนเตี้ย/ไม่มี interaction: วาดตาม hull มุมมองบนของโมเดล 3D -->
                   <polyline points="268.2,25.1 293.8,32.7 268.2,40.3 293.8,47.9 268.2,55.5 293.8,63.1 281,66.3" fill="none" stroke="#d6b45c" stroke-width="2.6" stroke-linejoin="round"/>
                   <g stroke="#d6b45c" stroke-width="3.2" stroke-dasharray="2.4 2.6">
                     <path d="M212 78V146M350 78V146M216 147H346"/>
@@ -547,13 +533,11 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                   <g fill="#c9d0d8">
                     <rect x="350.8" y="21.9" width="2.2" height="11"/><rect x="356.2" y="21.9" width="2.2" height="11"/><rect x="361.7" y="21.9" width="2.2" height="11"/><rect x="367.2" y="21.9" width="2.2" height="11"/>
                     <rect x="350.8" y="52.5" width="2.2" height="11"/><rect x="356.2" y="52.5" width="2.2" height="11"/><rect x="361.7" y="52.5" width="2.2" height="11"/><rect x="367.2" y="52.5" width="2.2" height="11"/>
-                    <!-- ขาสวิตช์ BTN_A / BTN_B / RST -->
                     <rect x="99.2" y="234.9" width="4.8" height="3.2"/><rect x="99.2" y="258.2" width="4.8" height="3.2"/><rect x="141.6" y="234.9" width="4.8" height="3.2"/><rect x="141.6" y="258.2" width="4.8" height="3.2"/>
                     <rect x="412.1" y="233.6" width="4.8" height="3.2"/><rect x="412.1" y="256.9" width="4.8" height="3.2"/><rect x="454.5" y="233.6" width="4.8" height="3.2"/><rect x="454.5" y="256.9" width="4.8" height="3.2"/>
                     <rect x="375.2" y="67.2" width="4.8" height="2.2"/><rect x="375.2" y="82.6" width="4.8" height="2.2"/><rect x="404" y="67.2" width="4.8" height="2.2"/><rect x="404" y="82.6" width="4.8" height="2.2"/>
                     <rect x="237.6" y="457.4" width="84.8" height="19.2" rx="1.5" fill="#aeb6bf"/>
                   </g>
-                  <!-- ขั้วต่อสายรีเลย์ (screw terminal) -->
                   <g fill="#111317">
                     <polygon points="478.2,186.9 495.5,177 513.4,208.3 496.1,218.2"/>
                     <polygon points="496.7,277.5 515.1,246.5 532.3,256.7 513.9,287.7"/>
@@ -565,7 +549,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                   <g stroke="#59626c" stroke-width="1.1">
                     <path d="M488 191.5l6-4.6M497.6 208.3l6-4.6M516.4 256.5l6 4.6M506.6 273.1l6 4.6"/>
                   </g>
-                  <!-- ขั้วต่อ I2C / UART2 (JST สีขาว) -->
                   <g transform="translate(74.65 306.35) rotate(59.4)">
                     <rect x="-28.5" y="-13.85" width="57" height="27.7" rx="2" fill="#efefe8" stroke="#b9b9ae"/>
                     <rect x="-24" y="-5" width="48" height="12" rx="1" fill="#2a2c30"/>
@@ -576,7 +559,6 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
                     <rect x="-23.5" y="-5" width="47" height="12" rx="1" fill="#2a2c30"/>
                     <g fill="#d6b45c"><rect x="-18.5" y="-1.5" width="3" height="3"/><rect x="-6.5" y="-1.5" width="3" height="3"/><rect x="5.5" y="-1.5" width="3" height="3"/><rect x="17.5" y="-1.5" width="3" height="3"/></g>
                   </g>
-                  <!-- DIP switch -->
                   <rect x="317.1" y="391.7" width="36" height="17.2" rx="1.5" fill="#16191d"/>
                   <g fill="#ecebe6">
                     <rect x="321.9" y="391.7" width="4.8" height="9.6"/><rect x="329.1" y="399.3" width="4.8" height="9.6"/><rect x="336.3" y="391.7" width="4.8" height="9.6"/><rect x="343.5" y="391.7" width="4.8" height="9.6"/>
@@ -731,14 +713,12 @@ const st = {
   tab: "out", rev: -1, serLen: 0, snap: null, zoom: 1, fit: 1
 };
 
-/* ---------------- toast ---------------- */
 let toastT;
 function toast(msg){
   const t = $("toast"); t.textContent = msg; t.classList.add("show");
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 1800);
 }
 
-/* ---------------- theme ---------------- */
 function setTheme(t){
   document.documentElement.setAttribute("data-theme", t);
   $("btnTheme").querySelector("use").setAttribute("href", t === "dark" ? "#i-moon" : "#i-sun");
@@ -747,13 +727,11 @@ function setTheme(t){
 setTheme(store.get("theme") || "light");
 $("btnTheme").onclick = () => setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
 
-/* ---------------- editor ---------------- */
 const code = $("code"), hl = $("hl"), gutter = $("gutter");
 const exSel = $("exampleSel");
 names.forEach(n => { const o = document.createElement("option"); o.value = o.textContent = n; exSel.appendChild(o); });
 
 function hlHtml(src){
-  // engine highlight, then colour the <header.h> part of #include lines
   return S.highlight(src).replace(/(<span class="pre">#\s*include\s*)(&lt;[^<]*?&gt;|"[^<]*?")/g, '$1<span class="inc">$2</span>');
 }
 function renderEditor(){
@@ -784,7 +762,6 @@ code.addEventListener("input", () => {
 });
 code.addEventListener("scroll", syncScroll);
 function insertText(t){
-  // setRangeText keeps native undo in most browsers via execCommand fallback
   if(!document.execCommand || !document.execCommand("insertText", false, t)){
     code.setRangeText(t, code.selectionStart, code.selectionEnd, "end");
     renderEditor();
@@ -854,7 +831,6 @@ async function copyText(text){
   toast("คัดลอกแล้ว");
 }
 
-/* more menu */
 const moreMenu = $("moreMenu");
 $("btnMore").onclick = (e) => { e.stopPropagation(); moreMenu.classList.toggle("open"); };
 document.addEventListener("click", () => moreMenu.classList.remove("open"));
@@ -873,7 +849,6 @@ $("fileIn").onchange = (e) => {
   r.readAsText(f); e.target.value = "";
 };
 
-/* fullscreen */
 function toggleFs(el){
   if(document.fullscreenElement) document.exitFullscreen();
   else if(el.requestFullscreen) el.requestFullscreen().catch(() => {});
@@ -882,7 +857,6 @@ $("btnFsEditor").onclick = () => toggleFs($("editorCard"));
 $("btnFsBoard").onclick = () => toggleFs($("boardCard"));
 document.addEventListener("fullscreenchange", () => setTimeout(measureBoard, 50));
 
-/* Code toggle (show/hide editor column) */
 $("btnCode").onclick = () => {
   const m = $("main"); m.classList.toggle("board-only");
   const on = !m.classList.contains("board-only");
@@ -890,7 +864,6 @@ $("btnCode").onclick = () => {
   setTimeout(measureBoard, 30);
 };
 
-/* ---------------- engine hooks ---------------- */
 S.HOST.source = () => code.value;
 S.HOST.badge = (t, k) => { st.badge = t; st.badgeKind = k || ""; renderStatus(); };
 S.HOST.baud = (b) => { st.baud = b; $("baudSel").value = String(b); if($("baudSel").value !== String(b)){ const o = document.createElement("option"); o.textContent = b; $("baudSel").appendChild(o); $("baudSel").value = String(b); } renderBaud(); };
@@ -924,7 +897,6 @@ function renderBaud(){
 }
 $("baudSel").onchange = () => { renderBaud(); st.rev = -1; };
 
-/* ---------------- console ---------------- */
 function setTab(t){
   st.tab = t;
   document.querySelectorAll(".ctab").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
@@ -959,7 +931,6 @@ function send(){ const v = $("serIn").value; if(!v) return; S.sendSerial(v); $("
 $("btnSend").onclick = send;
 $("serIn").addEventListener("keydown", (e) => { if(e.key === "Enter") send(); });
 
-/* ---------------- inputs ---------------- */
 const I = S.INPUTS;
 function fill(r){ r.style.setProperty("--p", ((r.value - r.min) / (r.max - r.min) * 100) + "%"); }
 function bindRange(id, valId, key, fmt){
@@ -997,7 +968,6 @@ document.querySelectorAll(".stabs button").forEach(b => b.onclick = () => {
   $("pWifi").classList.toggle("hidden", b.dataset.stab !== "wifi");
 });
 
-/* ---------------- board interaction ---------------- */
 function bindHwBtn(el, which){
   const down = (e) => { e.preventDefault(); S.unlockAudio(); S.setBtn(which, true); el.setPointerCapture && el.setPointerCapture(e.pointerId); };
   const up = () => S.setBtn(which, false);
@@ -1021,7 +991,6 @@ function potMove(e){
 pot.addEventListener("pointerdown", (e) => { e.preventDefault(); pot.setPointerCapture(e.pointerId); potMove(e); });
 pot.addEventListener("pointermove", (e) => { if(pot.hasPointerCapture(e.pointerId)) potMove(e); });
 
-/* board scale + zoom */
 const area = $("boardArea"), stage = $("stage"), board = $("board");
 const ZOOMS = [1, 1.35, 1.75];
 function measureBoard(){
@@ -1035,7 +1004,6 @@ function measureBoard(){
   tagEls.forEach((el, i) => { el.style.left = (PARTS[i].x * s) + "px"; el.style.top = (PARTS[i].y * s) + "px"; });
 }
 
-/* part labels: x/y = dot position in board coords (560x500), side = which way the name extends */
 const PARTS = [
   { x:281, y:106, side:"r", name:"ESP32 Module", pin:"ESP32-D0WDQ6", desc:"สมองของบอร์ด — ชิป ESP32 dual-core 240MHz พร้อม WiFi/Bluetooth ในตัว โค้ดที่กด Run จะทำงานบนชิปนี้" },
   { x:360, y:43, side:"r", name:"SHT31", pin:"I2C 0x44", desc:"เซนเซอร์วัดอุณหภูมิและความชื้น อ่านค่าด้วย <code>sht31.readTemperature()</code> / <code>readHumidity()</code> — ปรับค่าได้ที่แผง Sensors" },
@@ -1051,7 +1019,7 @@ const PARTS = [
   { x:372, y:442, side:"r", name:"Buzzer", pin:"GPIO 33", desc:"ลำโพง Buzzer มีเสียงจริง ใช้ <code>tone()</code> หรือ <code>ledcWriteTone()</code>" },
   { x:280, y:467, side:"r", name:"USB Port", pin:"UART0", desc:"พอร์ต USB สำหรับอัปโหลดโค้ดและสื่อสาร Serial (ดูผลที่ Serial Monitor)" }
 ];
-window.PARTS = PARTS; // ให้ board3d.js (ES module แยกไฟล์) อ่านตำแหน่ง/ชื่อชิ้นส่วนชุดเดียวกับ 2D
+window.PARTS = PARTS; 
 const tagBox = $("tags");
 const tagEls = PARTS.map((p, i) => {
   const el = document.createElement("div");
@@ -1070,7 +1038,7 @@ function showPart(i){
   $("piDesc").innerHTML = p.desc;
   $("partInfo").classList.add("open");
 }
-window.showPart = showPart; // ให้ board3d.js เรียก popover เดิมตรงๆ เมื่อคลิกชิ้นส่วนใน 3D
+window.showPart = showPart; 
 function hidePart(){ $("partInfo").classList.remove("open"); tagEls.forEach(el => el.classList.remove("sel")); }
 $("partClose").onclick = hidePart;
 function setTags(on){
@@ -1079,8 +1047,6 @@ function setTags(on){
   if(!on) hidePart();
   store.set("tags", on ? "1" : "0");
 }
-// มุมมอง 3D: board3d.js ส่งตำแหน่งชิ้นส่วนที่ project ลงจอมาทุกเฟรม — ย้ายป้ายตามโมเดล 3D แทนพิกัด 2D
-// และเลือกฝั่งชื่อตามว่าจุดอยู่ซีกซ้าย/ขวาของภาพ ป้ายจะได้ไม่ล้นออกนอกกรอบ
 window.placeTags3D = (pts) => {
   const half = tagBox.clientWidth / 2;
   pts.forEach(p => {
@@ -1109,7 +1075,6 @@ if(window.ResizeObserver) new ResizeObserver(measureBoard).observe(area);
 window.addEventListener("resize", measureBoard);
 measureBoard();
 
-/* ---------------- run controls ---------------- */
 $("btnRun").onclick = () => S.run();
 $("btnStop").onclick = () => S.stop();
 $("btnReset").onclick = () => S.reset();
@@ -1133,13 +1098,11 @@ window.addEventListener("keyup", (e) => {
 });
 window.addEventListener("click", () => S.unlockAudio(), { once:true });
 
-/* help modal */
 function openHelp(){ $("helpModal").classList.add("open"); }
 function closeHelp(){ $("helpModal").classList.remove("open"); }
 $("btnHelp").onclick = openHelp;
 $("helpModal").addEventListener("click", (e) => { if(e.target === e.currentTarget || e.target.closest("[data-close]")) closeHelp(); });
 
-/* ---------------- render loop ---------------- */
 const PIN_NAMES = { R:"RGB · Red", G:"RGB · Green", B:"RGB · Blue", A:"ปุ่ม A", K1:"Relay 1", K2:"Relay 2", BUZ:"Buzzer", VR:"VR / LDR" };
 let pinRows = null;
 function renderPins(chips){
@@ -1189,7 +1152,7 @@ function tick(t){
      p.btnA !== s.btnA || p.btnB !== s.btnB || p.wifi !== s.wifi || p.millis !== s.millis || p.adc !== s.adc){
     renderBoard(s); st.snap = s;
   }
-  if(window.__board3dTick) window.__board3dTick(s); // sync มุมมอง 3D (ถ้าเปิดอยู่) ทุกเฟรม — OLED ต้องอัปเดตแม้ฟิลด์อื่นไม่เปลี่ยน
+  if(window.__board3dTick) window.__board3dTick(s); 
   if(S.rev() !== st.rev){ st.rev = S.rev(); renderConsole(); }
 }
 renderStatus();
@@ -1198,9 +1161,6 @@ requestAnimationFrame(tick);
 })();
 </script>
 
-<!-- ชั้น 3D เสริม (Three.js) — ดู board3d.js / 3D-SIMULATOR-PLAN.md Phase A
-     แยกเป็น ES module ของตัวเอง สื่อสารกับสคริปต์หลักข้างบนผ่าน window.PARTS / window.showPart
-     (ที่ expose ไว้แล้ว) และ window.__board3dTick (tick() ข้างบนเรียกทุกเฟรม) -->
 <script type="module">
 import { initBoard3D } from "./board3d.js";
 (function(){
@@ -1226,7 +1186,6 @@ import { initBoard3D } from "./board3d.js";
     return board3d;
   }
 
-  // พื้นหลัง/ตารางของ 3D ตามธีมสว่าง-มืดของหน้า — ฟังการเปลี่ยน data-theme ที่ setTheme() ของสคริปต์หลักตั้งไว้
   function syncTheme(){ if(board3d) board3d.setTheme(document.documentElement.getAttribute("data-theme")); }
   new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
@@ -1247,7 +1206,6 @@ import { initBoard3D } from "./board3d.js";
   };
   btnReset3d.onclick = () => { if(board3d) board3d.resetView(); };
 
-  // ป้ายชื่อรับ pointer event (คลิกเปิดรายละเอียดได้) จึงบัง wheel ไม่ให้ถึง canvas — ส่งต่อให้ซูมได้แม้เมาส์อยู่บนป้าย
   document.getElementById("tags").addEventListener("wheel", (e) => {
     if(!visible) return;
     e.preventDefault();
