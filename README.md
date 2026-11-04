@@ -1,6 +1,6 @@
-# SPU IoT ESP32 Board Simulator
+# ESP32 Board Simulator
 
-A browser-based simulator for the SPU IoT ESP32 dev board. Write Arduino-style
+A browser-based simulator for an ESP32 dev board. Write Arduino-style
 (`.ino`) code in the built-in editor and run it against a simulated board —
 no physical hardware or Arduino IDE required.
 

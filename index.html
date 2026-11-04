@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>SPU IoT Board Simulator</title>
+<title>ESP32 Board Simulator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -418,7 +418,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
     <div class="brandbar glass">
       <div class="brand">
         <svg class="i logo" style="stroke-width:1.7"><use href="#i-chip"/></svg>
-        <div><b>SPU IoT</b><span>Board Simulator</span></div>
+        <div><b>ESP32</b><span>Board Simulator</span></div>
       </div>
       <button class="btn primary" id="btnCode" title="แสดง/ซ่อนตัวแก้ไขโค้ด"><svg class="i"><use href="#i-code"/></svg>Code</button>
       <button class="btn run" id="btnRun" title="Verify &amp; Run (Ctrl+R)"><svg class="i"><use href="#i-play"/></svg>Run</button>
@@ -427,7 +427,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
     </div>
     <label class="boardsel glass" title="บอร์ดเป้าหมาย">
       <span class="chip"></span>
-      <select aria-label="Board"><option>ESP32-DevKit V1 · SPU IoT</option></select>
+      <select aria-label="Board"><option>ESP32</option></select>
       <svg class="i"><use href="#i-down"/></svg>
     </label>
     <div class="right">
@@ -669,7 +669,7 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
             <div class="srow">
               <svg class="i ic" style="color:var(--blue)"><use href="#i-wifi"/></svg>
               <label for="tSsid">SSID</label>
-              <input type="text" id="tSsid" value="SPU-IoT" spellcheck="false">
+              <input type="text" id="tSsid" value="ESP32-AP" spellcheck="false">
             </div>
             <div class="srow">
               <svg class="i ic" style="color:var(--blue)"><use href="#i-chip"/></svg>
