@@ -1,4 +1,4 @@
-/* board3d.js — ชั้นแสดงผล 3D เสริม (Three.js) บน SPU IoT Board Simulator
+/* board3d.js — ชั้นแสดงผล 3D เสริม (Three.js) บน ESP32 Board Simulator
  * ตามแผน 3D-SIMULATOR-PLAN.md
  *
  * Phase B: โหลดโมเดลจริงจาก assets/models/board.glb (ปั้นใน Blender ตามตาราง Section 4)
@@ -6,7 +6,7 @@
  * (ไฟล์เสีย/ไม่มีไฟล์/ตั้งชื่อผิดตอน export) จะ log warning แล้ว fallback ไปสร้าง
  * primitive geometry แทนที่ชิ้นส่วนนั้นๆ โดยอัตโนมัติ (Phase A เดิม) — ไม่ทำให้หน้าเว็บพัง
  *
- * ไม่แก้ไข sim-engine.js — อ่านสถานะผ่าน SPUSim.snapshot() ที่ส่งเข้ามาทาง update(s) เท่านั้น
+ * ไม่แก้ไข sim-engine.js — อ่านสถานะผ่าน ESP32Sim.snapshot() ที่ส่งเข้ามาทาง update(s) เท่านั้น
  * ตำแหน่งชิ้นส่วนอ่านจากอาเรย์ PARTS เดิมของ index.html (ส่งเข้ามาผ่าน hooks.getParts())
  * ชื่อ Object 3D มาจาก board3d-parts-map.js (index ต้องตรงกับ PARTS) — ชื่อเดียวกันนี้
  * ต้องตรงกับชื่อ Object ใน Blender เป๊ะๆ (ดูหมายเหตุใน board3d-parts-map.js)
@@ -800,7 +800,7 @@ export function initBoard3D(canvas, hooks) {
     if (rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
   }
 
-  /* ---------------- sync จาก SPUSim.snapshot() ---------------- */
+  /* ---------------- sync จาก ESP32Sim.snapshot() ---------------- */
   function setEmissive(mesh, hex, on) {
     if (!mesh.material || !mesh.material.emissive) return;
     mesh.material.color.set(on ? hex : 0x2c333b);
@@ -845,7 +845,7 @@ export function initBoard3D(canvas, hooks) {
     if (buzzer) setEmissive(buzzer, 0xf59e0b, s.tone > 0);
 
     // ปุ่ม A/B ใน 3D เป็นการ "สะท้อนสถานะ" (reflect) เท่านั้น ไม่ใช่ input จริง —
-    // อินพุตจริงยังคงมาจากคีย์ลัด A/B หรือปุ่ม 2D เดิม (#hwA/#hwB) ผ่าน SPUSim.setBtn()
+    // อินพุตจริงยังคงมาจากคีย์ลัด A/B หรือปุ่ม 2D เดิม (#hwA/#hwB) ผ่าน ESP32Sim.setBtn()
     pressButton("BTN_A", s.btnA);
     pressButton("BTN_B", s.btnB);
 

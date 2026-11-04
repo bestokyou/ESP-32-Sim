@@ -716,11 +716,11 @@ input[type=range]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%;
 <script>
 (function(){
 "use strict";
-const S = window.SPUSim;
+const S = window.ESP32Sim;
 const $ = (id) => document.getElementById(id);
 const store = {
-  get(k){ try{ return localStorage.getItem("spu-sim:"+k); }catch(e){ return null; } },
-  set(k,v){ try{ localStorage.setItem("spu-sim:"+k, v); }catch(e){} }
+  get(k){ try{ return localStorage.getItem("esp32-sim:"+k); }catch(e){ return null; } },
+  set(k,v){ try{ localStorage.setItem("esp32-sim:"+k, v); }catch(e){} }
 };
 if(!S){ document.body.innerHTML = "<p style='padding:40px'>โหลด sim-engine.js ไม่สำเร็จ</p>"; return; }
 
