@@ -102,6 +102,26 @@ function getPCBColorTexture() {
   return _pcbColorTex;
 }
 
+let _glowTex = null;
+function getGlowTexture() {
+  if (_glowTex) return _glowTex;
+  const size = 128;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = size;
+  const ctx = cv.getContext("2d");
+  const grd = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  grd.addColorStop(0, "rgba(255,255,255,1)");
+  grd.addColorStop(0.12, "rgba(255,255,255,0.85)");
+  grd.addColorStop(0.35, "rgba(255,255,255,0.28)");
+  grd.addColorStop(0.65, "rgba(255,255,255,0.07)");
+  grd.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, size, size);
+  _glowTex = new THREE.CanvasTexture(cv);
+  _glowTex.colorSpace = THREE.SRGBColorSpace;
+  return _glowTex;
+}
+
 function getNoiseRoughnessTexture() {
   if (!_noiseRoughTex) _noiseRoughTex = makeNoiseRoughnessTexture();
   return _noiseRoughTex;
@@ -514,6 +534,7 @@ export function initBoard3D(canvas, hooks) {
       partGroup.add(mesh);
       byName.set(name3d, mesh);
       addPickable(name3d, i);
+      if (name3d === "RGB_LED") attachLedGlow(mesh);
     });
   }
 
@@ -584,12 +605,74 @@ export function initBoard3D(canvas, hooks) {
         partGroup.add(mesh);
       }
 
-      if (name3d === "RGB_LED") mesh.traverse((o) => { if (o.material) o.material.toneMapped = false; });
       if (name3d === "OLED_Screen") wireOled(mesh, foundInGltf);
 
       byName.set(name3d, mesh);
       addPickable(name3d, i);
+      if (name3d === "RGB_LED") attachLedGlow(mesh);
     });
+  }
+
+  const ledFx = { body: null, core: null, halo: null, spill: null };
+  function attachLedGlow(mesh) {
+    const body = mesh.material;
+    if (!body) return;
+    body.toneMapped = true;
+    body.color.set(0xeceef2);
+    body.roughness = 0.35;
+    body.metalness = 0;
+    if (body.emissive) body.emissive.set(0x000000);
+    ledFx.body = body;
+
+    scene.updateMatrixWorld();
+    const box = new THREE.Box3().setFromObject(mesh);
+    const c = box.getCenter(new THREE.Vector3());
+    const size = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
+
+    ledFx.core = new THREE.Mesh(
+      new THREE.CircleGeometry(size * 0.3, 32),
+      new THREE.MeshBasicMaterial({ map: getGlowTexture(), color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })
+    );
+    ledFx.core.rotation.x = -Math.PI / 2;
+    ledFx.core.position.set(c.x, box.max.y + 0.00005, c.z);
+    ledFx.core.visible = false;
+
+    ledFx.halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: getGlowTexture(), color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, depthTest: false, toneMapped: false }));
+    ledFx.halo.scale.set(size * 4.5, size * 4.5, 1);
+    ledFx.halo.position.set(c.x, box.max.y + size * 0.15, c.z);
+    ledFx.halo.renderOrder = 10;
+    ledFx.halo.visible = false;
+
+    ledFx.spill = new THREE.Mesh(
+      new THREE.PlaneGeometry(size * 6, size * 6),
+      new THREE.MeshBasicMaterial({ map: getGlowTexture(), color: 0x000000, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, polygonOffset: true, polygonOffsetFactor: -2 })
+    );
+    ledFx.spill.rotation.x = -Math.PI / 2;
+    ledFx.spill.position.set(c.x, box.min.y + 0.00005, c.z);
+    ledFx.spill.visible = false;
+
+    scene.add(ledFx.spill, ledFx.core, ledFx.halo);
+  }
+
+  const _ledCol = new THREE.Color();
+  const _white = new THREE.Color(1, 1, 1);
+  function setLedLight(r, g, b) {
+    if (!ledFx.body) return;
+    const level = Math.max(r, g, b);
+    const on = level > 0.01;
+    ledFx.core.visible = ledFx.halo.visible = ledFx.spill.visible = on;
+    if (!on) {
+      if (ledFx.body.emissive) ledFx.body.emissive.set(0x000000);
+      return;
+    }
+
+    _ledCol.setRGB(r / level, g / level, b / level, THREE.SRGBColorSpace);
+    const glow = Math.sqrt(level);
+
+    if (ledFx.body.emissive) ledFx.body.emissive.copy(_ledCol).multiplyScalar(0.35 * glow);
+    ledFx.core.material.color.copy(_ledCol).lerp(_white, 0.45).multiplyScalar(1.6 * glow);
+    ledFx.halo.material.color.copy(_ledCol).multiplyScalar(0.9 * glow);
+    ledFx.spill.material.color.copy(_ledCol).multiplyScalar(0.45 * glow);
   }
 
   function loadModel() {
@@ -716,18 +799,8 @@ export function initBoard3D(canvas, hooks) {
   function update(s) {
     if (!s) return;
 
-    const rgb = byName.get("RGB_LED");
-    if (rgb && rgb.material) {
-      const m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(s.rgbCss);
-      if (m) {
-        const r = +m[1] / 255, g = +m[2] / 255, b = +m[3] / 255;
-        rgb.material.color.setRGB(r * 0.25, g * 0.25, b * 0.25, THREE.SRGBColorSpace);
-        if (rgb.material.emissive) {
-          rgb.material.emissive.setRGB(r, g, b, THREE.SRGBColorSpace);
-          rgb.material.emissiveIntensity = r + g + b > 0 ? 1.0 : 0;
-        }
-      }
-    }
+    const m = /rgb\((\d+),\s*(\d+),\s*(\d+)\)/.exec(s.rgbCss);
+    if (m) setLedLight(+m[1] / 255, +m[2] / 255, +m[3] / 255);
 
     const relay1 = byName.get("RELAY1"); if (relay1) setEmissive(relay1, 0x16a34a, s.relay1);
     const relay2 = byName.get("RELAY2"); if (relay2) setEmissive(relay2, 0x16a34a, s.relay2);
