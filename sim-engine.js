@@ -422,10 +422,14 @@ class Parser{
     }
     if(this.isId("sizeof")){
       this.next();
-      if(this.isOp("(")){ this.next(); let d=1;
-        while(d>0){ if(this.isOp("(")) d++; if(this.isOp(")")) d--; if(d>0) this.next(); }
-        this.expect("op",")"); }
-      return {k:"num",v:4,f:false,line:ln};
+      if(this.isOp("(") && this.peek(1).t==="id" && (PRIMS.has(this.peek(1).v)||QUALS.has(this.peek(1).v))){
+        const save=this.p;
+        this.next();
+        const t=this.parseType();
+        if(this.isOp(")")){ this.next(); return {k:"num",v:sizeOfType(t.raw,t.ptr),f:false,line:ln}; }
+        this.p=save;
+      }
+      return {k:"sizeof",e:this.parseUnary(),line:ln};
     }
     if(this.isOp("(") && this.peek(1).t==="id" && PRIMS.has(this.peek(1).v)){
       const save=this.p;
@@ -822,6 +826,31 @@ function coerce(val,type){
     default:      return val;
   }
 }
+function sizeOfType(raw,ptr){
+  if(ptr>0) return 4;
+  const t=(raw||"").replace(/\b(const|static|volatile|extern|inline|signed)\b/g,"").trim();
+  if(/\b(char|byte|bool|boolean|uint8_t|int8_t)\b/.test(t)) return 1;
+  if(/\b(short|word|uint16_t|int16_t)\b/.test(t)) return 2;
+  if(/\b(double|uint64_t|int64_t)\b/.test(t)||/\blong\s+long\b/.test(t)) return 8;
+  return 4;
+}
+function sizeOfExpr(e,env){
+  if(!e) return 4;
+  if(e.k==="id"){
+    const c=env.find(e.v);
+    if(c&&c.val&&c.val.t==="arr") return c.val.v.length*(c.val.es||4);
+    if(c&&c.sz) return c.sz;
+    return 4;
+  }
+  if(e.k==="index"){
+    if(e.o.k==="id"){ const c=env.find(e.o.v); if(c&&c.val&&c.val.t==="arr") return c.val.es||4; }
+    return 4;
+  }
+  if(e.k==="str") return e.v.length+1;
+  if(e.k==="chr") return 1;
+  if(e.k==="num") return e.f?8:4;
+  return 4;
+}
 function typeOfDecl(raw,ptr){
   const t=(raw||"").replace(/\b(const|static|volatile|extern|inline)\b/g,"").trim();
   if(ptr>0) return /char/.test(t) ? "str" : "int";
@@ -921,13 +950,13 @@ class Interp{
           const n=num(yield* this.ev(it.arrSize,env));
           while(arr.length<n) arr.push(0);
         }
-        env.def(it.name,{type:"arr",val:{t:"arr",v:arr}});
+        env.def(it.name,{type:"arr",val:{t:"arr",v:arr,es:sizeOfType(d.type.raw,d.type.ptr)}});
         continue;
       }
       let val;
       if(it.init) val=coerce(yield* this.ev(it.init,env),dt);
       else val = dt==="str"?VS(""):(dt==="float"?VF(0):(dt==="obj"?this.construct(d.type.raw,[]):VI(0)));
-      env.def(it.name,{type:dt,val});
+      env.def(it.name,{type:dt,val,sz:sizeOfType(d.type.raw,d.type.ptr)});
     }
   }
   construct(raw,args){
@@ -1027,6 +1056,7 @@ class Interp{
         if(BUILTIN_OBJS.has(n.v)) return {t:"obj",v:{cls:n.v}};
         this.err("'"+n.v+"' was not declared in this scope");
       }
+      case "sizeof": return VI(sizeOfExpr(n.e,env));
       case "comma": yield* this.ev(n.l,env); return yield* this.ev(n.r,env);
       case "cast": return coerce(yield* this.ev(n.e,env), typeOfDecl(n.type.raw));
       case "cond": return truthy(yield* this.ev(n.c,env)) ? yield* this.ev(n.a,env) : yield* this.ev(n.b,env);
@@ -1399,7 +1429,7 @@ function checkProgram(ast,includes){
         break;
       case "bin": walkE(e.l,fname); walkE(e.r,fname); break;
       case "assign": walkE(e.l,fname); walkE(e.r,fname); break;
-      case "un": case "pre": case "post": case "cast": walkE(e.e,fname); break;
+      case "un": case "pre": case "post": case "cast": case "sizeof": walkE(e.e,fname); break;
       case "cond": walkE(e.c,fname); walkE(e.a,fname); walkE(e.b,fname); break;
       case "comma": walkE(e.l,fname); walkE(e.r,fname); break;
       case "index": walkE(e.o,fname); walkE(e.i,fname); break;
