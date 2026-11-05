@@ -61,7 +61,7 @@ docker compose up --build
 - [board3d.js](board3d.js) — มุมมองบอร์ด 3D ด้วย Three.js
 - [board3d-parts-map.js](board3d-parts-map.js) — จับคู่ชื่อชิ้นส่วนในโมเดล 3D
   กับอุปกรณ์บนบอร์ดจำลอง
-- [support.js](support.js) — ไฮไลต์ไวยากรณ์และส่วนเสริมของตัวแก้ไขโค้ด
-- [assets/](assets) — texture ของบอร์ดและโมเดล 3D (`board.glb`, `board-source.blend`)
+- [assets/](assets) — texture ของบอร์ด (`pcb-top.png`), โมเดล 3D ที่เว็บใช้ (`board.glb`)
+  และไฟล์ Blender ต้นฉบับ (`board-source.blend`)
 - [3D-SIMULATOR-PLAN.md](3D-SIMULATOR-PLAN.md) — บันทึกการออกแบบมุมมอง 3D
   และแผนการพัฒนาเป็นระยะ

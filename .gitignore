@@ -6,3 +6,6 @@
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Local Claude Code config
+.claude/
