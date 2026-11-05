@@ -792,21 +792,55 @@ code.addEventListener("keydown", (e) => {
   }
 });
 
+function exampleSlug(n, i){
+  const ex = n.match(/ข้อ\s*(\d+)/);
+  if(ex) return "ex" + ex[1];
+  const en = n.match(/\(([^)]+)\)/);
+  if(en) return en[1].toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return "example" + i;
+}
+const slugOf = {}, nameOfSlug = {};
+names.forEach((n, i) => { const s = exampleSlug(n, i); slugOf[n] = s; nameOfSlug[s] = n; });
+function hashExample(){
+  const h = decodeURIComponent(location.hash.replace(/^#/, "")).toLowerCase();
+  return nameOfSlug[h] || null;
+}
+function setHash(n){
+  const h = "#" + slugOf[n];
+  if(location.hash !== h) history.replaceState(null, "", h);
+}
+function loadExample(n){
+  st.exampleName = n; exSel.value = n; store.set("example", n);
+  setCode(S.EXAMPLES[n], S.EXAMPLES[n]);
+  clearTimeout(saveT); store.set("code", code.value);
+  setHash(n);
+}
+
 const saved = store.get("code");
 const savedEx = store.get("example");
-if(savedEx && S.EXAMPLES[savedEx]){ st.exampleName = savedEx; exSel.value = savedEx; }
-setCode(saved != null ? saved : S.EXAMPLES[st.exampleName], S.EXAMPLES[st.exampleName]);
+const linkedEx = hashExample();
+if(linkedEx && linkedEx !== savedEx){
+  loadExample(linkedEx);
+} else {
+  if(savedEx && S.EXAMPLES[savedEx]){ st.exampleName = savedEx; exSel.value = savedEx; }
+  setCode(saved != null ? saved : S.EXAMPLES[st.exampleName], S.EXAMPLES[st.exampleName]);
+  setHash(st.exampleName);
+}
 
 exSel.onchange = () => {
   const n = exSel.value;
   if(code.value !== st.baseCode && !confirm("โหลดตัวอย่าง \"" + n + "\" ? โค้ดที่แก้ไขไว้จะถูกแทนที่")){ exSel.value = st.exampleName; return; }
-  st.exampleName = n; store.set("example", n);
-  setCode(S.EXAMPLES[n], S.EXAMPLES[n]);
+  loadExample(n);
 };
+window.addEventListener("hashchange", () => {
+  const n = hashExample();
+  if(!n || n === st.exampleName) return;
+  if(code.value !== st.baseCode && !confirm("โหลดตัวอย่าง \"" + n + "\" ? โค้ดที่แก้ไขไว้จะถูกแทนที่")){ setHash(st.exampleName); return; }
+  loadExample(n);
+});
 $("btnNew").onclick = () => {
   if(code.value !== st.baseCode && !confirm("เริ่มไฟล์ใหม่? โค้ดที่แก้ไขไว้จะถูกแทนที่")) return;
-  st.exampleName = names[0]; exSel.value = names[0]; store.set("example", names[0]);
-  setCode(S.EXAMPLES[names[0]], S.EXAMPLES[names[0]]);
+  loadExample(names[0]);
   code.focus();
 };
 $("btnClearCode").onclick = () => {
@@ -1162,18 +1196,27 @@ requestAnimationFrame(tick);
 </script>
 
 <script type="module">
-import { initBoard3D } from "./board3d.js";
 (function(){
   "use strict";
   const canvas = document.getElementById("board3d-canvas");
   const btn3d = document.getElementById("btn3d");
   const btnReset3d = document.getElementById("btnReset3d");
   const boardEl = document.getElementById("board");
+  const btnLabel = btn3d.querySelector(".lbl-t");
+  const labelText = btnLabel ? btnLabel.textContent : "";
 
   let board3d = null;
+  let loading = null;
   let visible = false;
 
-  function ensure(){
+  function loadModule(){
+    if(!loading) loading = import("./board3d.js").catch((e) => { loading = null; throw e; });
+    return loading;
+  }
+
+  async function ensure(){
+    if(board3d) return board3d;
+    const { initBoard3D } = await loadModule();
     if(!board3d){
       board3d = initBoard3D(canvas, {
         getParts: () => window.PARTS || [],
@@ -1189,14 +1232,41 @@ import { initBoard3D } from "./board3d.js";
   function syncTheme(){ if(board3d) board3d.setTheme(document.documentElement.getAttribute("data-theme")); }
   new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-  btn3d.onclick = () => {
+  btn3d.addEventListener("pointerenter", () => { loadModule().catch(() => {}); }, { once: true });
+
+  function show2D(){
+    canvas.style.display = "none";
+    boardEl.style.display = "";
+    if(board3d) board3d.hide();
+    if(window.restoreTags2D) window.restoreTags2D();
+  }
+
+  btn3d.onclick = async () => {
     visible = !visible;
     btn3d.classList.toggle("on", visible);
     btnReset3d.style.display = visible ? "" : "none";
     if(visible){
-      boardEl.style.display = "none";
-      canvas.style.display = "";
-      ensure().show();
+      if(!board3d){
+        btn3d.disabled = true;
+        if(btnLabel) btnLabel.textContent = "กำลังโหลด 3D…";
+      }
+      try{
+        const b = await ensure();
+        if(!visible) return;
+        boardEl.style.display = "none";
+        canvas.style.display = "";
+        b.show();
+      }catch(e){
+        console.error(e);
+        visible = false;
+        btn3d.classList.remove("on");
+        btnReset3d.style.display = "none";
+        show2D();
+        alert("โหลดมุมมอง 3D ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่");
+      }finally{
+        btn3d.disabled = false;
+        if(btnLabel) btnLabel.textContent = labelText;
+      }
     } else {
       canvas.style.display = "none";
       boardEl.style.display = "";
